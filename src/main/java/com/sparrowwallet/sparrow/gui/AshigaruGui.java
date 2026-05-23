@@ -66,7 +66,7 @@ public class AshigaruGui extends Application {
         Scene scene = new Scene(root, 1100, 720);
         scene.getStylesheets().add(getClass().getResource("ashigaru.css").toExternalForm());
 
-        stage.setTitle("Ashigaru " + AshigaruTerminal.APP_VERSION);
+        stage.setTitle("Ashigaru Desktop " + AshigaruTerminal.APP_VERSION);
         stage.setMinWidth(800);
         stage.setMinHeight(540);
         stage.setScene(scene);
@@ -129,6 +129,7 @@ public class AshigaruGui extends Application {
 
             Stage splashStage = new Stage();
             splashStage.initStyle(StageStyle.UNDECORATED);
+            splashStage.setTitle("Ashigaru Desktop " + AshigaruTerminal.APP_VERSION);
             Scene splashScene = new Scene(splashRoot, 600, 400);
             splashScene.getStylesheets().add(getClass().getResource("ashigaru.css").toExternalForm());
             splashStage.setScene(splashScene);

@@ -677,14 +677,19 @@ public class AshigaruWalletController implements Initializable {
 
     @FXML
     private void onRefresh() {
-        if (currentWalletForm != null) {
-            currentWalletForm.refreshHistory(AppServices.getCurrentBlockHeight());
-        }
-        // For Premix/Postmix/Badbank views, the master history service does not
-        // fetch child account addresses — refresh the child form separately.
+        refreshForm(currentWalletForm);
         if (activeAccountForm != null && activeAccountForm != currentWalletForm) {
-            activeAccountForm.refreshHistory(AppServices.getCurrentBlockHeight());
+            refreshForm(activeAccountForm);
         }
+    }
+
+    private void refreshForm(WalletForm walletForm) {
+        if (walletForm == null) return;
+        Wallet wallet = walletForm.getWallet();
+        Wallet pastWallet = wallet.copy();
+        wallet.clearHistory();
+        AppServices.clearTransactionHistoryCache(wallet);
+        EventManager.get().post(new WalletHistoryClearedEvent(wallet, pastWallet, walletForm.getWalletId()));
     }
 
     // -------------------------------------------------------------------------
