@@ -658,7 +658,10 @@ public class AshigaruMainController implements Initializable {
                 }
                 AshigaruGui.addWallet(storage, wak.getWallet());
                 for (Map.Entry<WalletAndKey, Storage> entry : wak.getChildWallets().entrySet()) {
-                    AshigaruGui.addWallet(entry.getValue(), entry.getKey().getWallet());
+                    Storage childStorage = entry.getValue();
+                    WalletAndKey childWak = entry.getKey();
+                    childStorage.restorePublicKeysFromSeed(childWak.getWallet(), childWak.getKey());
+                    AshigaruGui.addWallet(childStorage, childWak.getWallet());
                 }
             } catch (Exception ex) {
                 log.error("Error opening wallet", ex);
