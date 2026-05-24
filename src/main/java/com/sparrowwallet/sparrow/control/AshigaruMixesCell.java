@@ -32,11 +32,13 @@ public class AshigaruMixesCell extends TableCell<AshigaruWalletController.UtxoRo
         AshigaruWalletController.UtxoRow row = getTableRow().getItem();
         UtxoEntry utxoEntry = row.utxoEntry;
 
-        if(mixStatus != null && mixStatus.getMixProgress() != null) {
+        if(mixStatus != null && (mixStatus.getMixProgress() != null || mixStatus.getNextMixUtxo() != null)) {
             setText(null);
             setGraphic(imageView);
-            if(mixStatus.getMixProgress().getMixStep() != null) {
+            if(mixStatus.getMixProgress() != null && mixStatus.getMixProgress().getMixStep() != null) {
                 setTooltip(new Tooltip(mixStatus.getMixProgress().getMixStep().name()));
+            } else if(mixStatus.getNextMixUtxo() != null) {
+                setTooltip(new Tooltip("Queued for next mix"));
             } else {
                 setTooltip(null);
             }
