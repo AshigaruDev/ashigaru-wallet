@@ -751,15 +751,17 @@ public class AshigaruWalletController implements Initializable {
     public void whirlpoolMix(WhirlpoolMixEvent event) {
         if (activeAccountForm != null && event.getWallet().equals(activeAccountForm.getWallet())) {
             Platform.runLater(() -> {
-                // Refresh the mixes column for the affected UTXO
                 utxoRows.stream()
                         .filter(row -> row.utxoEntry.getHashIndex().equals(event.getUtxo()))
                         .findFirst()
                         .ifPresent(row -> {
-                            if (event.getMixProgress() != null) {
+                            if(event.getNextUtxo() != null) {
+                                row.utxoEntry.setNextMixUtxo(event.getNextUtxo());
+                            } else if(event.getMixFailReason() != null) {
+                                row.utxoEntry.setMixFailReason(event.getMixFailReason(), event.getMixError());
+                            } else {
                                 row.utxoEntry.setMixProgress(event.getMixProgress());
                             }
-                            // Force table refresh
                             utxoTable.refresh();
                         });
             });
