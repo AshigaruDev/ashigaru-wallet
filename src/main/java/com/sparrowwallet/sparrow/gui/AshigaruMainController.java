@@ -654,7 +654,13 @@ public class AshigaruMainController implements Initializable {
             try {
                 storage.restorePublicKeysFromSeed(wak.getWallet(), wak.getKey());
                 if (!wak.getWallet().isValid()) {
-                    throw new IllegalStateException("Wallet file is not valid.");
+                    log.warn("Wallet file is not valid (likely a child/aux wallet opened standalone): {}",
+                            storage.getWalletFile().getName());
+                    showError("Cannot open this wallet",
+                            "This file is not a complete wallet on its own. "
+                                    + "If it's a Premix, Postmix or Badbank file, open the parent wallet instead and use the tabs.");
+                    Platform.runLater(() -> walletSelector.getSelectionModel().select(PLACEHOLDER));
+                    return;
                 }
                 AshigaruGui.addWallet(storage, wak.getWallet());
                 for (Map.Entry<WalletAndKey, Storage> entry : wak.getChildWallets().entrySet()) {
