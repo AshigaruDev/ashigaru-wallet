@@ -11,6 +11,7 @@ import com.sparrowwallet.sparrow.AppServices;
 import com.sparrowwallet.sparrow.Theme;
 import com.sparrowwallet.sparrow.EventManager;
 import com.sparrowwallet.sparrow.UnitFormat;
+import com.sparrowwallet.sparrow.control.AshigaruMixesCell;
 import com.sparrowwallet.sparrow.event.*;
 import com.sparrowwallet.sparrow.io.Config;
 import com.sparrowwallet.sparrow.io.Storage;
@@ -22,6 +23,7 @@ import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -70,7 +72,7 @@ public class AshigaruWalletController implements Initializable {
     @FXML private TableColumn<UtxoRow, String> colOutput;
     @FXML private TableColumn<UtxoRow, String> colAddress;
     @FXML private TableColumn<UtxoRow, String> colLabel;
-    @FXML private TableColumn<UtxoRow, String> colMixes;
+    @FXML private TableColumn<UtxoRow, UtxoEntry.MixStatus> colMixes;
     @FXML private TableColumn<UtxoRow, String> colValue;
     @FXML private TableView<TxnRow> txnTable;
     @FXML private TableColumn<TxnRow, String> colTxnDate;
@@ -116,7 +118,11 @@ public class AshigaruWalletController implements Initializable {
             }
         });
         colAddress.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().address));
-        colMixes.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().mixes));
+        colMixes.setCellValueFactory(d -> {
+            UtxoEntry e = d.getValue().utxoEntry;
+            return e != null ? e.mixStatusProperty() : new SimpleObjectProperty<>(null);
+        });
+        colMixes.setCellFactory(col -> new AshigaruMixesCell());
         colValue.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().value));
 
         colAddress.setCellFactory(col -> new TableCell<>() {
@@ -387,11 +393,9 @@ public class AshigaruWalletController implements Initializable {
                 address = "";
             }
             String label   = utxoEntry.getLabel() != null ? utxoEntry.getLabel() : "";
-            String mixes   = isMixWallet && utxoEntry.getMixStatus() != null
-                    ? String.valueOf(utxoEntry.getMixStatus().getMixesDone()) : "-";
             String value   = fmt.formatBtcValue(hashIndex.getValue()) + " BTC";
 
-            UtxoRow row = new UtxoRow(date, output, address, mixes, label, value, utxoEntry);
+            UtxoRow row = new UtxoRow(date, output, address, label, value, utxoEntry);
             row.selected.addListener((obs, o, n) -> updateActionButtons());
             utxoRows.add(row);
         }
@@ -815,14 +819,14 @@ public class AshigaruWalletController implements Initializable {
     // Inner types
     // -------------------------------------------------------------------------
 
-    static class UtxoRow {
-        final String date, output, address, mixes, label, value;
-        final UtxoEntry utxoEntry;
+    public static class UtxoRow {
+        final String date, output, address, label, value;
+        public final UtxoEntry utxoEntry;
         final BooleanProperty selected = new SimpleBooleanProperty(false);
-        UtxoRow(String date, String output, String address, String mixes,
+        UtxoRow(String date, String output, String address,
                 String label, String value, UtxoEntry utxoEntry) {
             this.date = date; this.output = output; this.address = address;
-            this.mixes = mixes; this.label = label; this.value = value;
+            this.label = label; this.value = value;
             this.utxoEntry = utxoEntry;
         }
     }

@@ -68,7 +68,7 @@
             <TableColumn fx:id="colOutput"  text="Output"  prefWidth="220" minWidth="160"/>
             <TableColumn fx:id="colAddress" text="Address" prefWidth="240" minWidth="160"/>
             <TableColumn fx:id="colLabel"   text="Label"   prefWidth="160" minWidth="100"/>
-            <TableColumn fx:id="colMixes"   text="Mixes"   prefWidth="80"  minWidth="60"/>
+            <TableColumn fx:id="colMixes"   text="Mixes"   prefWidth="90"  minWidth="70"/>
             <TableColumn fx:id="colValue"   text="Value"   prefWidth="160" minWidth="120"/>
         </columns>
         <placeholder>
