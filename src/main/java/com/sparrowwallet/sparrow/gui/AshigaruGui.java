@@ -231,6 +231,8 @@ public class AshigaruGui extends Application {
                         Platform.runLater(() -> childForm.refreshHistory(AppServices.getCurrentBlockHeight()));
                     }
                 }
+
+                publishOpenWalletsEvent();
             }
         } else {
             EventManager.get().post(new WalletOpeningEvent(storage, wallet));
@@ -239,10 +241,7 @@ public class AshigaruGui extends Application {
             EventManager.get().register(walletForm);
             instance.walletForms.put(walletForm.getWalletId(), walletForm);
 
-            List<WalletTabData> tabDataList = instance.walletForms.values().stream()
-                    .map(form -> new WalletTabData(TabData.TabType.WALLET, form))
-                    .collect(Collectors.toList());
-            EventManager.get().post(new OpenWalletsEvent(DEFAULT_WINDOW, tabDataList));
+            publishOpenWalletsEvent();
 
             if (wallet.isValid()) {
                 Platform.runLater(() -> walletForm.refreshHistory(AppServices.getCurrentBlockHeight()));
@@ -280,8 +279,18 @@ public class AshigaruGui extends Application {
 
         // Sync AppServices.walletWindows — without this, getOpenWallets() returns a stale
         // entry for the deleted wallet, breaking all subsequent commands that call it.
+        publishOpenWalletsEvent();
+    }
+
+    private static void publishOpenWalletsEvent() {
         List<WalletTabData> tabDataList = instance.walletForms.values().stream()
-                .map(f -> new WalletTabData(TabData.TabType.WALLET, f))
+                .flatMap(form -> {
+                    List<WalletForm> forms = new ArrayList<>();
+                    forms.add(form);
+                    forms.addAll(form.getNestedWalletForms());
+                    return forms.stream();
+                })
+                .map(form -> new WalletTabData(TabData.TabType.WALLET, form))
                 .collect(Collectors.toList());
         EventManager.get().post(new OpenWalletsEvent(DEFAULT_WINDOW, tabDataList));
     }
