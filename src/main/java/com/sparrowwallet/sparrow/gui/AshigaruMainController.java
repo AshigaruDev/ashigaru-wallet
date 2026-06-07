@@ -1,12 +1,14 @@
 package com.sparrowwallet.sparrow.gui;
 
 import com.google.common.eventbus.Subscribe;
+import com.sparrowwallet.drongo.ExtendedKey;
 import com.sparrowwallet.drongo.Network;
 import com.sparrowwallet.drongo.SecureString;
 import com.sparrowwallet.drongo.crypto.InvalidPasswordException;
+import com.sparrowwallet.drongo.wallet.DeterministicSeed;
+import com.sparrowwallet.drongo.wallet.Keystore;
 import com.sparrowwallet.drongo.wallet.StandardAccount;
 import com.sparrowwallet.drongo.wallet.Wallet;
-import com.sparrowwallet.drongo.wallet.Keystore;
 import com.sparrowwallet.sparrow.AppServices;
 import com.sparrowwallet.sparrow.EventManager;
 import com.sparrowwallet.sparrow.control.SeedDisplayDialog;
@@ -18,6 +20,7 @@ import com.sparrowwallet.sparrow.io.Config;
 import com.sparrowwallet.sparrow.io.Storage;
 import com.sparrowwallet.sparrow.io.StorageException;
 import com.sparrowwallet.sparrow.io.WalletAndKey;
+import com.sparrowwallet.sparrow.io.WalletLabels;
 import com.sparrowwallet.sparrow.wallet.WalletForm;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -27,7 +30,11 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -35,10 +42,10 @@ import javafx.stage.FileChooser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.util.*;
+import javafx.concurrent.Task;
 
 public class AshigaruMainController implements Initializable {
     private static final Logger log = LoggerFactory.getLogger(AshigaruMainController.class);
@@ -55,6 +62,9 @@ public class AshigaruMainController implements Initializable {
     @FXML private VBox accountButtonsBox;
     @FXML private Button deleteWalletBtn;
     @FXML private Button viewSeedBtn;
+    @FXML private Button exportLabelsBtn;
+    @FXML private Button importLabelsBtn;
+    @FXML private Button lockWalletBtn;
     @FXML private ToggleGroup accountToggleGroup;
     @FXML private ToggleButton depositBtn;
     @FXML private ToggleButton premixBtn;
@@ -110,11 +120,11 @@ public class AshigaruMainController implements Initializable {
     // -------------------------------------------------------------------------
 
     private void maybeReconnectOnLeavingPrefs() {
-        if (contentPane.getUserData() instanceof PreferencesController prefsCtrl) {
-            if (prefsCtrl.isReconnectOnClosing() && !(AppServices.isConnecting() || AppServices.isConnected())) {
+        if (contentPane.getUserData() instanceof PreferencesController prefsController) {
+            contentPane.setUserData(null);
+            if (prefsController.isReconnectOnClosing() && !(AppServices.isConnecting() || AppServices.isConnected())) {
                 EventManager.get().post(new RequestConnectEvent());
             }
-            contentPane.setUserData(null);
         }
     }
 
@@ -128,6 +138,12 @@ public class AshigaruMainController implements Initializable {
         deleteWalletBtn.setManaged(false);
         viewSeedBtn.setVisible(false);
         viewSeedBtn.setManaged(false);
+        exportLabelsBtn.setVisible(false);
+        exportLabelsBtn.setManaged(false);
+        importLabelsBtn.setVisible(false);
+        importLabelsBtn.setManaged(false);
+        lockWalletBtn.setVisible(false);
+        lockWalletBtn.setManaged(false);
     }
 
     private void selectWallet(String walletId) {
@@ -144,6 +160,15 @@ public class AshigaruMainController implements Initializable {
         deleteWalletBtn.setManaged(true);
         viewSeedBtn.setVisible(true);
         viewSeedBtn.setManaged(true);
+        exportLabelsBtn.setVisible(true);
+        exportLabelsBtn.setManaged(true);
+        importLabelsBtn.setVisible(true);
+        importLabelsBtn.setManaged(true);
+
+        boolean encrypted = false;
+        try { encrypted = walletForm.getStorage().isEncrypted(); } catch (IOException ignored) {}
+        lockWalletBtn.setVisible(encrypted);
+        lockWalletBtn.setManaged(encrypted);
 
         // Select Deposit by default
         depositBtn.setSelected(true);
@@ -170,6 +195,16 @@ public class AshigaruMainController implements Initializable {
             currentWalletController = loader.getController();
             currentWalletController.setWalletForm(activeForm, currentWalletForm);
             contentPane.setCenter(walletPanel);
+            // Kick off a fresh history fetch so UTXOs/transactions appear immediately.
+            // For non-Deposit accounts, also refresh the child form — master history
+            // service does not fetch Premix/Postmix/Badbank address history.
+            WalletForm childForm = activeForm != currentWalletForm ? activeForm : null;
+            Platform.runLater(() -> {
+                currentWalletForm.refreshHistory(AppServices.getCurrentBlockHeight());
+                if (childForm != null) {
+                    childForm.refreshHistory(AppServices.getCurrentBlockHeight());
+                }
+            });
         } catch (Exception e) {
             log.error("Error loading wallet panel", e);
             showError("Error", "Could not load wallet view: " + e.getMessage());
@@ -247,9 +282,13 @@ public class AshigaruMainController implements Initializable {
         }
     }
 
+    public void setPendingSelectFile(File file) {
+        this.pendingSelectFile = file;
+    }
+
     @FXML
     private void onCreateWallet() {
-        new WalletCreationFlow(AshigaruGui.get().getMainStage()).start();
+        new WalletCreationFlow(AshigaruGui.get().getMainStage(), this).start();
     }
 
     @FXML
@@ -269,26 +308,180 @@ public class AshigaruMainController implements Initializable {
         WalletForm form = AshigaruGui.get().getWalletForms().get(item.walletId());
         if (form == null) return;
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Delete Wallet");
-        confirm.setHeaderText("Delete \"" + item.displayName() + "\"?");
-        confirm.setContentText("This will permanently delete the wallet file. This cannot be undone.");
-        confirm.initOwner(AshigaruGui.get().getMainStage());
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn != ButtonType.OK) return;
-            Storage.DeleteWalletService svc = new Storage.DeleteWalletService(form.getStorage(), false);
-            svc.setOnSucceeded(e -> {
-                svc.cancel();
-                AshigaruGui.removeWallet(item.walletId());
-                refreshWalletList();
-                showWelcome();
+        boolean encrypted = false;
+        try { encrypted = form.getStorage().isEncrypted(); } catch (IOException ignored) {}
+
+        if (encrypted && item.walletFile() != null) {
+            Dialog<String> pwDialog = buildPasswordDialog(item.displayName());
+            pwDialog.setHeaderText("Enter wallet password to confirm permanent deletion");
+            Optional<String> pwResult = pwDialog.showAndWait();
+            if (pwResult.isEmpty() || pwResult.get() == null) return;
+
+            Storage verifyStor = new Storage(item.walletFile());
+            Storage.LoadWalletService verifySvc = new Storage.LoadWalletService(verifyStor, new SecureString(pwResult.get()));
+            verifySvc.setOnSucceeded(e -> { verifySvc.getValue().clear(); Platform.runLater(() -> doDelete(item, form)); });
+            verifySvc.setOnFailed(e -> {
+                Throwable ex = verifySvc.getException();
+                if (ex instanceof InvalidPasswordException) {
+                    showError("Wrong Password", "Incorrect password — wallet not deleted.");
+                } else {
+                    showError("Verification Failed", "Could not verify password: " + ex.getMessage());
+                }
             });
-            svc.setOnFailed(e -> {
-                svc.cancel();
-                showError("Delete Failed", svc.getException().getMessage());
-            });
-            svc.start();
+            verifySvc.start();
+        } else {
+            // Unencrypted wallet — verify BIP39 passphrase before deleting.
+            Dialog<String> ppDialog = buildPassphraseDialog(item.displayName());
+            Optional<String> ppResult = ppDialog.showAndWait();
+            if (ppResult.isEmpty() || ppResult.get() == null) return;
+            if (!verifyWalletPassphrase(form.getWallet(), ppResult.get())) {
+                showError("Incorrect Passphrase", "The passphrase did not match. Wallet not deleted.");
+                return;
+            }
+            doDelete(item, form);
+        }
+    }
+
+    private Dialog<String> buildPassphraseDialog(String walletName) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Delete Wallet");
+        dialog.setHeaderText("Enter passphrase to permanently delete \"" + walletName + "\"");
+        dialog.initOwner(AshigaruGui.get().getMainStage());
+
+        ButtonType deleteBtn = new ButtonType("Delete", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(deleteBtn, ButtonType.CANCEL);
+
+        Label hint = new Label("Enter your BIP39 passphrase (leave empty if none):");
+        PasswordField pf = new PasswordField();
+        pf.setPromptText("Passphrase");
+        VBox vbox = new VBox(6, hint, pf);
+        dialog.getDialogPane().setContent(vbox);
+        Platform.runLater(pf::requestFocus);
+        dialog.setResultConverter(btn -> btn == deleteBtn ? pf.getText() : null);
+        return dialog;
+    }
+
+    /**
+     * Re-derives the account extended key from the stored mnemonic + entered passphrase,
+     * then compares the resulting public key against the keystore's stored xpub.
+     * Returns true if they match (or if the wallet has no verifiable seed, e.g. hardware wallet).
+     */
+    private boolean verifyWalletPassphrase(Wallet wallet, String enteredPassphrase) {
+        for (Keystore keystore : wallet.getKeystores()) {
+            DeterministicSeed seed = keystore.getSeed();
+            if (seed == null || seed.isEncrypted() || seed.getMnemonicCode() == null) {
+                continue; // hardware wallet / watch-only — skip
+            }
+            SecureString savedPassphrase = seed.getPassphrase();
+            try {
+                seed.setPassphrase(enteredPassphrase);
+                ExtendedKey derivedXprv = keystore.getExtendedPrivateKey();
+                byte[] derivedPub = derivedXprv.getKey().dropPrivateBytes().getPubKey();
+                byte[] storedPub  = keystore.getExtendedPublicKey().getKey().getPubKey();
+                if (!Arrays.equals(derivedPub, storedPub)) {
+                    return false;
+                }
+            } catch (Exception e) {
+                return false;
+            } finally {
+                seed.setPassphrase(savedPassphrase);
+            }
+        }
+        return true;
+    }
+
+    private void doDelete(WalletListItem item, WalletForm form) {
+        Storage.DeleteWalletService svc = new Storage.DeleteWalletService(form.getStorage(), false);
+        svc.setOnSucceeded(e -> {
+            svc.cancel();
+            AshigaruGui.removeWallet(item.walletId());
+            refreshWalletList();
+            showWelcome();
         });
+        svc.setOnFailed(e -> {
+            svc.cancel();
+            showError("Delete Failed", svc.getException().getMessage());
+        });
+        svc.start();
+    }
+
+    @FXML
+    private void onExportLabels() {
+        if(currentWalletForm == null) return;
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Export Labels");
+        fc.setInitialFileName(currentWalletForm.getWallet().getDisplayName() + "-labels.jsonl");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("BIP329 Labels (*.jsonl)", "*.jsonl"));
+        File file = fc.showSaveDialog(AshigaruGui.get().getMainStage());
+        if(file == null) return;
+
+        WalletForm form = currentWalletForm;
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                try(FileOutputStream fos = new FileOutputStream(file)) {
+                    new WalletLabels().exportWallet(form.getWallet(), fos, null);
+                }
+                return null;
+            }
+        };
+        task.setOnSucceeded(e -> showInfo("Labels Exported", "Labels saved to " + file.getName()));
+        task.setOnFailed(e -> showError("Export Failed", task.getException().getMessage()));
+        new Thread(task, "labels-export").start();
+    }
+
+    @FXML
+    private void onImportLabels() {
+        if(currentWalletForm == null) return;
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Import Labels");
+        fc.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("BIP329 Labels (*.jsonl)", "*.jsonl"),
+                new FileChooser.ExtensionFilter("All Files", "*.*"));
+        File file = fc.showOpenDialog(AshigaruGui.get().getMainStage());
+        if(file == null) return;
+
+        List<WalletForm> forms = new ArrayList<>();
+        forms.add(currentWalletForm);
+        forms.addAll(currentWalletForm.getNestedWalletForms());
+        WalletLabels importer = new WalletLabels(forms);
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                try(FileInputStream fis = new FileInputStream(file)) {
+                    importer.importWallet(fis, null);
+                }
+                return null;
+            }
+        };
+        task.setOnSucceeded(e -> showInfo("Labels Imported", "Labels imported from " + file.getName()));
+        task.setOnFailed(e -> showError("Import Failed", task.getException().getMessage()));
+        new Thread(task, "labels-import").start();
+    }
+
+    private void showInfo(String title, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, message, ButtonType.OK);
+            alert.setTitle(title);
+            alert.setHeaderText(title);
+            alert.initOwner(AshigaruGui.get().getMainStage());
+            alert.show();
+        });
+    }
+
+    @FXML
+    private void onLockWallet() {
+        if (currentWalletForm == null) return;
+        File walletFile = currentWalletForm.getStorage().getWalletFile();
+        // Remove nested wallet forms from the registry (master removal won't clean these)
+        for (WalletForm nested : currentWalletForm.getNestedWalletForms()) {
+            AshigaruGui.get().getWalletForms().remove(nested.getWalletId());
+        }
+        AshigaruGui.removeWallet(currentWalletForm.getWalletId());
+        currentWalletForm = null;
+        unloadedWalletFiles.add(walletFile);
+        refreshWalletList();
+        showWelcome();
     }
 
     @FXML
@@ -335,12 +528,49 @@ public class AshigaruMainController implements Initializable {
             PreferencesController prefsController = loader.getController();
             prefsController.initializeView(Config.get());
             prefsController.reconnectOnClosingProperty().set(AppServices.isConnecting() || AppServices.isConnected());
-            contentPane.setCenter(prefsPanel);
-            contentPane.setUserData(prefsController);
             prefsController.selectGroup(PreferenceGroup.GENERAL);
+
+            Button backBtn = new Button("← Back");
+            backBtn.setOnAction(e -> closePreferences());
+            backBtn.getStyleClass().add("prefs-back-btn");
+
+            Label pageTitle = new Label("Preferences");
+            pageTitle.getStyleClass().add("prefs-page-title");
+
+            HBox pageHeader = new HBox(16, backBtn, pageTitle);
+            pageHeader.setAlignment(Pos.CENTER_LEFT);
+            pageHeader.getStyleClass().add("prefs-page-header");
+            pageHeader.setPadding(new Insets(8, 16, 8, 16));
+
+            VBox.setVgrow(prefsPanel, Priority.ALWAYS);
+            VBox wrapper = new VBox(pageHeader, prefsPanel);
+
+            contentPane.setCenter(wrapper);
+            contentPane.setUserData(prefsController);
         } catch (IOException e) {
             log.error("Error loading preferences panel", e);
             showError("Error", "Could not load preferences: " + e.getMessage());
+        }
+    }
+
+    private void closePreferences() {
+        maybeReconnectOnLeavingPrefs();
+        if (pendingSelectFile != null) {
+            // A wallet was created/restored while in prefs — refreshWalletList will consume
+            // pendingSelectFile and auto-select the new wallet
+            refreshWalletList();
+        } else if (currentWalletForm != null) {
+            // Return to whichever wallet was open before entering prefs
+            String wid = currentWalletForm.getWalletId();
+            refreshWalletList();
+            walletItems.stream()
+                    .filter(item -> item.isLoaded() && wid.equals(item.walletId()))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            item -> walletSelector.getSelectionModel().select(item),
+                            this::showWelcome);
+        } else {
+            walletSelector.getSelectionModel().select(PLACEHOLDER);
         }
     }
 
@@ -365,16 +595,6 @@ public class AshigaruMainController implements Initializable {
      * with a lock icon and are only decrypted when the user explicitly selects them.
      */
     public void addRecentWalletFile(File file) {
-        try {
-            Storage storage = new Storage(file);
-            if (!storage.isEncrypted()) {
-                Platform.runLater(() -> runLoadService(storage, null));
-                return;
-            }
-        } catch (IOException e) {
-            log.warn("Could not determine encryption status, treating as encrypted: " + file, e);
-        }
-        // Either confirmed encrypted, or couldn't tell — show as locked in dropdown
         unloadedWalletFiles.add(file);
         Platform.runLater(this::refreshWalletList);
     }
@@ -385,11 +605,19 @@ public class AshigaruMainController implements Initializable {
      */
     private void unlockWallet(WalletListItem item) {
         Storage storage = new Storage(item.walletFile());
+        try {
+            if (!storage.isEncrypted()) {
+                pendingSelectFile = item.walletFile();
+                Platform.runLater(() -> runLoadService(storage, null));
+                return;
+            }
+        } catch (IOException e) {
+            log.warn("Could not check encryption status: " + item.walletFile(), e);
+        }
         String walletName = item.displayName().replaceFirst("^\uD83D\uDD12\\s*", "");
         Dialog<String> pwDialog = buildPasswordDialog(walletName);
         Optional<String> result = pwDialog.showAndWait();
         if (result.isEmpty() || result.get() == null) {
-            // Cancelled — reset to placeholder without triggering another prompt
             Platform.runLater(() -> walletSelector.getSelectionModel().select(PLACEHOLDER));
             return;
         }
@@ -426,11 +654,20 @@ public class AshigaruMainController implements Initializable {
             try {
                 storage.restorePublicKeysFromSeed(wak.getWallet(), wak.getKey());
                 if (!wak.getWallet().isValid()) {
-                    throw new IllegalStateException("Wallet file is not valid.");
+                    log.warn("Wallet file is not valid (likely a child/aux wallet opened standalone): {}",
+                            storage.getWalletFile().getName());
+                    showError("Cannot open this wallet",
+                            "This file is not a complete wallet on its own. "
+                                    + "If it's a Premix, Postmix or Badbank file, open the parent wallet instead and use the tabs.");
+                    Platform.runLater(() -> walletSelector.getSelectionModel().select(PLACEHOLDER));
+                    return;
                 }
                 AshigaruGui.addWallet(storage, wak.getWallet());
                 for (Map.Entry<WalletAndKey, Storage> entry : wak.getChildWallets().entrySet()) {
-                    AshigaruGui.addWallet(entry.getValue(), entry.getKey().getWallet());
+                    Storage childStorage = entry.getValue();
+                    WalletAndKey childWak = entry.getKey();
+                    childStorage.restorePublicKeysFromSeed(childWak.getWallet(), childWak.getKey());
+                    AshigaruGui.addWallet(childStorage, childWak.getWallet());
                 }
             } catch (Exception ex) {
                 log.error("Error opening wallet", ex);
@@ -521,12 +758,18 @@ public class AshigaruMainController implements Initializable {
         if (event.getWallet().isMasterWallet()) {
             Platform.runLater(() -> {
                 unloadedWalletFiles.remove(event.getStorage().getWalletFile());
-                refreshWalletList();
+                if (contentPane.getUserData() instanceof PreferencesController && pendingSelectFile != null) {
+                    // Wallet created/restored while in preferences — leave prefs and go to the new wallet
+                    closePreferences();
+                } else {
+                    refreshWalletList();
+                }
             });
         }
     }
 
     public void refreshWalletList() {
+        if (contentPane.getUserData() instanceof PreferencesController) return;
         WalletListItem currentSelection = walletSelector.getSelectionModel().getSelectedItem();
 
         walletItems.clear();
@@ -552,11 +795,6 @@ public class AshigaruMainController implements Initializable {
                 String displayName = "\uD83D\uDD12 " + deriveWalletName(f);
                 walletItems.add(new WalletListItem(null, displayName, f));
             }
-        }
-
-        // Don't auto-navigate when preferences is open
-        if (contentPane.getUserData() instanceof PreferencesController) {
-            return;
         }
 
         // After a successful unlock, auto-select the just-loaded wallet

@@ -621,7 +621,7 @@ public class DbPersistence implements Persistence {
     }
 
     private Flyway getFlyway(Storage storage, String schema, String password, File resourcesDir) throws StorageException {
-        return Flyway.configure().dataSource(getDataSource(storage, password)).locations("filesystem:" + resourcesDir.getAbsolutePath()).schemas(schema).failOnMissingLocations(true).load();
+        return Flyway.configure().dataSource(getDataSource(storage, password)).locations("filesystem:" + resourcesDir.getAbsolutePath()).schemas(schema).failOnMissingLocations(true).ignoreMissingMigrations(true).load();
     }
 
     //Flyway does not support JPMS yet, so the migration files are extracted to a temp dir in order to avoid classloader encapsulation issues
@@ -672,6 +672,23 @@ public class DbPersistence implements Persistence {
                 throw new StorageException("Wallet file may already be in use. Make sure the application is not running elsewhere.", e);
             } else if(e.getMessage() != null && (e.getMessage().contains("Wrong user name or password") || e.getMessage().contains("Encryption error in file"))) {
                 throw new InvalidPasswordException("Incorrect password for wallet file " + walletFile.getAbsolutePath(), e);
+            } else if(isLegacyH2Format(e)) {
+                try {
+                    migrateLegacyH2Format(walletFile, password);
+                } catch(Exception migEx) {
+                    log.error("Failed to migrate legacy H2 database", migEx);
+                    throw new StorageException("Failed to migrate wallet from older database format: " + migEx.getMessage(), migEx);
+                }
+                try {
+                    HikariConfig retryConfig = new HikariConfig();
+                    retryConfig.setJdbcUrl(getUrl(walletFile, password));
+                    retryConfig.setUsername(H2_USER);
+                    retryConfig.setPassword(password == null ? H2_PASSWORD : password + " " + H2_PASSWORD);
+                    return new HikariDataSource(retryConfig);
+                } catch(HikariPool.PoolInitializationException retryEx) {
+                    log.error("Failed to open migrated wallet database", retryEx);
+                    throw new StorageException("Failed to open migrated wallet database.\n" + retryEx.getMessage(), retryEx);
+                }
             } else {
                 log.error("Failed to open database file", e);
                 throw new StorageException("Failed to open database file.\n" + e.getMessage(), e);
@@ -681,6 +698,45 @@ public class DbPersistence implements Persistence {
 
     private String getUrl(File walletFile, String password) {
         return "jdbc:h2:" + walletFile.getAbsolutePath().replace("." + getType().getExtension(), "") + ";DATABASE_TO_UPPER=false;DB_CLOSE_ON_EXIT=FALSE" + (password == null ? "" : ";CIPHER=AES");
+    }
+
+    private boolean isLegacyH2Format(HikariPool.PoolInitializationException e) {
+        Throwable t = e;
+        while(t != null) {
+            String msg = t.getMessage();
+            if(msg != null && (msg.contains("90048") || msg.contains("write format"))) return true;
+            t = t.getCause();
+        }
+        return false;
+    }
+
+    private void migrateLegacyH2Format(File walletFile, String password) throws Exception {
+        String fileBase = walletFile.getAbsolutePath().replace("." + getType().getExtension(), "");
+        String h2Password = password == null ? H2_PASSWORD : password + " " + H2_PASSWORD;
+        String cipherSuffix = password == null ? "" : ";CIPHER=AES";
+        String readOnlyUrl = "jdbc:h2:" + fileBase + ";ACCESS_MODE_DATA=r;DATABASE_TO_UPPER=false;DB_CLOSE_ON_EXIT=FALSE" + cipherSuffix;
+        File tempSql = Files.createTempFile("h2migrate", ".sql").toFile();
+        String newBase = fileBase + "_new";
+        File newMvDb = new File(newBase + "." + getType().getExtension());
+        try {
+            String escapedPath = tempSql.getAbsolutePath().replace("'", "''");
+            try(java.sql.Connection conn = java.sql.DriverManager.getConnection(readOnlyUrl, H2_USER, h2Password);
+                java.sql.Statement stmt = conn.createStatement()) {
+                stmt.execute("SCRIPT TO '" + escapedPath + "'");
+            }
+            String newUrl = "jdbc:h2:" + newBase + ";DATABASE_TO_UPPER=false;DB_CLOSE_ON_EXIT=FALSE" + cipherSuffix;
+            try(java.sql.Connection conn = java.sql.DriverManager.getConnection(newUrl, H2_USER, h2Password);
+                java.sql.Statement stmt = conn.createStatement()) {
+                stmt.execute("RUNSCRIPT FROM '" + escapedPath + "'");
+            }
+            File backup = new File(walletFile.getAbsolutePath() + ".bak");
+            Files.move(walletFile.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.move(newMvDb.toPath(), walletFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            log.info("Migrated {} from legacy H2 format. Backup at {}", walletFile.getName(), backup.getName());
+        } finally {
+            tempSql.delete();
+            if(newMvDb.exists()) newMvDb.delete();
+        }
     }
 
     private boolean persistsFor(Wallet wallet) {

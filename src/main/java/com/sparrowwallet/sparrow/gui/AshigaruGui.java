@@ -66,15 +66,26 @@ public class AshigaruGui extends Application {
         Scene scene = new Scene(root, 1100, 720);
         scene.getStylesheets().add(getClass().getResource("ashigaru.css").toExternalForm());
 
-        stage.setTitle("Ashigaru " + AshigaruTerminal.APP_VERSION);
+        stage.setTitle("Ashigaru Desktop " + AshigaruTerminal.APP_VERSION);
         stage.setMinWidth(800);
         stage.setMinHeight(540);
         stage.setScene(scene);
 
-        // Set app icon
+        // Set app icon (window + macOS Dock)
         try {
             Image icon = new Image(getClass().getResourceAsStream("/image/Ashigaru_Terminal_Logo_Circle.png"));
             stage.getIcons().add(icon);
+            try {
+                if (java.awt.Taskbar.isTaskbarSupported()) {
+                    java.awt.Taskbar taskbar = java.awt.Taskbar.getTaskbar();
+                    if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                        java.awt.image.BufferedImage awtIcon = javafx.embed.swing.SwingFXUtils.fromFXImage(icon, null);
+                        taskbar.setIconImage(awtIcon);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not set taskbar icon", e);
+            }
         } catch(Exception e) {
             log.warn("Could not load application icon", e);
         }
@@ -118,6 +129,7 @@ public class AshigaruGui extends Application {
 
             Stage splashStage = new Stage();
             splashStage.initStyle(StageStyle.UNDECORATED);
+            splashStage.setTitle("Ashigaru Desktop " + AshigaruTerminal.APP_VERSION);
             Scene splashScene = new Scene(splashRoot, 600, 400);
             splashScene.getStylesheets().add(getClass().getResource("ashigaru.css").toExternalForm());
             splashStage.setScene(splashScene);
@@ -219,6 +231,8 @@ public class AshigaruGui extends Application {
                         Platform.runLater(() -> childForm.refreshHistory(AppServices.getCurrentBlockHeight()));
                     }
                 }
+
+                publishOpenWalletsEvent();
             }
         } else {
             EventManager.get().post(new WalletOpeningEvent(storage, wallet));
@@ -227,10 +241,7 @@ public class AshigaruGui extends Application {
             EventManager.get().register(walletForm);
             instance.walletForms.put(walletForm.getWalletId(), walletForm);
 
-            List<WalletTabData> tabDataList = instance.walletForms.values().stream()
-                    .map(form -> new WalletTabData(TabData.TabType.WALLET, form))
-                    .collect(Collectors.toList());
-            EventManager.get().post(new OpenWalletsEvent(DEFAULT_WINDOW, tabDataList));
+            publishOpenWalletsEvent();
 
             if (wallet.isValid()) {
                 Platform.runLater(() -> walletForm.refreshHistory(AppServices.getCurrentBlockHeight()));
@@ -268,8 +279,18 @@ public class AshigaruGui extends Application {
 
         // Sync AppServices.walletWindows — without this, getOpenWallets() returns a stale
         // entry for the deleted wallet, breaking all subsequent commands that call it.
+        publishOpenWalletsEvent();
+    }
+
+    private static void publishOpenWalletsEvent() {
         List<WalletTabData> tabDataList = instance.walletForms.values().stream()
-                .map(f -> new WalletTabData(TabData.TabType.WALLET, f))
+                .flatMap(form -> {
+                    List<WalletForm> forms = new ArrayList<>();
+                    forms.add(form);
+                    forms.addAll(form.getNestedWalletForms());
+                    return forms.stream();
+                })
+                .map(form -> new WalletTabData(TabData.TabType.WALLET, form))
                 .collect(Collectors.toList());
         EventManager.get().post(new OpenWalletsEvent(DEFAULT_WINDOW, tabDataList));
     }

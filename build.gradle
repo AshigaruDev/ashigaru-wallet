@@ -67,7 +67,7 @@ dependencies {
     implementation(project(':darkjar'))
     implementation('com.google.guava:guava:33.0.0-jre')
     implementation('com.google.code.gson:gson:2.9.1')
-    implementation('com.h2database:h2:1.4.200')
+    implementation('com.h2database:h2:2.1.214')
     implementation('com.zaxxer:HikariCP:4.0.3') {
         exclude group: 'org.slf4j'
     }
@@ -77,7 +77,7 @@ dependencies {
     implementation('org.jdbi:jdbi3-sqlobject:3.20.0') {
         exclude group: 'org.slf4j'
     }
-    implementation('org.flywaydb:flyway-core:7.15.0')
+    implementation('org.flywaydb:flyway-core:8.5.13')
     implementation('org.fxmisc.richtext:richtextfx:0.10.4')
     implementation('no.tornado:tornadofx-controls:1.0.4')
     implementation('com.google.zxing:javase:3.4.0') {
@@ -235,17 +235,26 @@ jlink {
 }
 
 if (os.macOsX) {
+    // Ad-hoc sign the app bundle after jpackageImage creates it, before jpackage wraps it in a DMG.
+    // Required on Apple Silicon (unsigned code won't run); reduces Gatekeeper friction on Intel.
+    jpackageImage.doLast {
+        exec {
+            commandLine 'codesign', '--sign', '-', '--deep', '--force',
+                        '--entitlements', 'src/main/deploy/package/osx/Ashigaru.entitlements',
+                        "${buildDir}/jpackage/Ashigaru.app"
+        }
+    }
+}
+
+if (os.macOsX) {
     task packageZipDistribution(type: Exec, dependsOn: jpackageImage) {
         def outputDir = file("${buildDir}/distributions")
         def zipFile   = "${outputDir}/Ashigaru-${ashigaruTerminalVersion}-${osName}-${releaseArch}.zip"
         doFirst { outputDir.mkdirs() }
+        // Package the .app bundle (not the raw jlink image) so the ZIP is a valid Mac app
         commandLine 'sh', '-c',
-            "rm -rf '${buildDir}/tmp-zip' && " +
-            "mkdir -p '${buildDir}/tmp-zip/Ashigaru' && " +
-            "cp -R '${buildDir}/image/.' '${buildDir}/tmp-zip/Ashigaru/' && " +
-            "cd '${buildDir}/tmp-zip' && " +
-            "ditto -c -k --keepParent Ashigaru '${zipFile}' && " +
-            "rm -rf '${buildDir}/tmp-zip'"
+            "cd '${buildDir}/jpackage' && " +
+            "ditto -c -k --keepParent Ashigaru.app '${zipFile}'"
     }
 } else {
     task packageZipDistribution(type: Zip, dependsOn: jpackageImage) {

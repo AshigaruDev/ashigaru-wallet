@@ -11,18 +11,19 @@ import com.sparrowwallet.sparrow.AppServices;
 import com.sparrowwallet.sparrow.Theme;
 import com.sparrowwallet.sparrow.EventManager;
 import com.sparrowwallet.sparrow.UnitFormat;
+import com.sparrowwallet.sparrow.control.AshigaruMixesCell;
 import com.sparrowwallet.sparrow.event.*;
-import com.sparrowwallet.sparrow.glyphfont.FontAwesome5;
 import com.sparrowwallet.sparrow.io.Config;
 import com.sparrowwallet.sparrow.io.Storage;
 import com.sparrowwallet.sparrow.wallet.*;
 import com.sparrowwallet.sparrow.whirlpool.Whirlpool;
-import org.controlsfx.glyphfont.Glyph;
+import com.sparrowwallet.sparrow.whirlpool.WhirlpoolException;
 import com.sparrowwallet.sparrow.whirlpool.WhirlpoolServices;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -71,7 +72,7 @@ public class AshigaruWalletController implements Initializable {
     @FXML private TableColumn<UtxoRow, String> colOutput;
     @FXML private TableColumn<UtxoRow, String> colAddress;
     @FXML private TableColumn<UtxoRow, String> colLabel;
-    @FXML private TableColumn<UtxoRow, String> colMixes;
+    @FXML private TableColumn<UtxoRow, UtxoEntry.MixStatus> colMixes;
     @FXML private TableColumn<UtxoRow, String> colValue;
     @FXML private TableView<TxnRow> txnTable;
     @FXML private TableColumn<TxnRow, String> colTxnDate;
@@ -117,7 +118,11 @@ public class AshigaruWalletController implements Initializable {
             }
         });
         colAddress.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().address));
-        colMixes.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().mixes));
+        colMixes.setCellValueFactory(d -> {
+            UtxoEntry e = d.getValue().utxoEntry;
+            return e != null ? e.mixStatusProperty() : new SimpleObjectProperty<>(null);
+        });
+        colMixes.setCellFactory(col -> new AshigaruMixesCell());
         colValue.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().value));
 
         colAddress.setCellFactory(col -> new TableCell<>() {
@@ -128,7 +133,10 @@ public class AshigaruWalletController implements Initializable {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    HBox box = new HBox(4, new Label(item), makeCopyButton(item));
+                    Label lbl = new Label(item);
+                    lbl.setMaxWidth(Double.MAX_VALUE);
+                    HBox.setHgrow(lbl, javafx.scene.layout.Priority.ALWAYS);
+                    HBox box = new HBox(4, lbl, makeCopyButton(item));
                     box.setAlignment(Pos.CENTER_LEFT);
                     setText(null);
                     setGraphic(box);
@@ -341,11 +349,14 @@ public class AshigaruWalletController implements Initializable {
                 };
         accountNameLabel.setText(acctName);
 
-        // Receive button — only for Deposit (master wallet)
+        // Receive button and empty-state CTA — only for Deposit (master wallet).
+        // Premix/Postmix/Badbank wallets have no extendedPublicKey and will NPE if receive is attempted.
         boolean isDeposit = wallet.isMasterWallet() || wallet.getStandardAccountType() == null
                 || wallet.getStandardAccountType() == StandardAccount.ACCOUNT_0;
         receiveBtn.setVisible(isDeposit);
         receiveBtn.setManaged(isDeposit);
+        receiveCta.setVisible(isDeposit);
+        receiveCta.setManaged(isDeposit);
 
         // Badbank info bar
         boolean isBadbank = wallet.getStandardAccountType() == StandardAccount.WHIRLPOOL_BADBANK;
@@ -382,11 +393,9 @@ public class AshigaruWalletController implements Initializable {
                 address = "";
             }
             String label   = utxoEntry.getLabel() != null ? utxoEntry.getLabel() : "";
-            String mixes   = isMixWallet && utxoEntry.getMixStatus() != null
-                    ? String.valueOf(utxoEntry.getMixStatus().getMixesDone()) : "-";
             String value   = fmt.formatBtcValue(hashIndex.getValue()) + " BTC";
 
-            UtxoRow row = new UtxoRow(date, output, address, mixes, label, value, utxoEntry);
+            UtxoRow row = new UtxoRow(date, output, address, label, value, utxoEntry);
             row.selected.addListener((obs, o, n) -> updateActionButtons());
             utxoRows.add(row);
         }
@@ -587,13 +596,32 @@ public class AshigaruWalletController implements Initializable {
                 .collect(Collectors.toList());
         if (selectedEntries.isEmpty()) return;
 
+        Wallet activeWallet = activeAccountForm.getWallet();
+        if (activeWallet.getStandardAccountType() == StandardAccount.WHIRLPOOL_POSTMIX) {
+            Whirlpool wp = AppServices.getWhirlpoolServices().getWhirlpool(activeAccountForm.getMasterWalletId());
+            if (wp == null) {
+                AppServices.showErrorDialog("Mix error", "Whirlpool service not available for this wallet");
+                return;
+            }
+            int queued = 0;
+            for (UtxoEntry entry : selectedEntries) {
+                try {
+                    wp.mix(entry.getHashIndex());
+                    queued++;
+                } catch (WhirlpoolException e) {
+                    log.error("Could not queue remix for " + entry.getHashIndex(), e);
+                }
+            }
+            log.info("Queued " + queued + " of " + selectedEntries.size() + " Postmix UTXO(s) for remix");
+            return;
+        }
+
         try {
             Pool pool = AshigaruTx0Controller.show(
                     activeAccountForm.getMasterWalletId(), activeAccountForm, selectedEntries);
             if (pool != null) {
-                Wallet wallet = activeAccountForm.getWallet();
-                if (wallet.isMasterWallet() && !wallet.isWhirlpoolMasterWallet()) {
-                    addAccountIfNeeded(wallet, StandardAccount.WHIRLPOOL_PREMIX,
+                if (activeWallet.isMasterWallet() && !activeWallet.isWhirlpoolMasterWallet()) {
+                    addAccountIfNeeded(activeWallet, StandardAccount.WHIRLPOOL_PREMIX,
                             () -> broadcastPremix(pool, selectedEntries));
                 } else {
                     Platform.runLater(() -> broadcastPremix(pool, selectedEntries));
@@ -653,9 +681,19 @@ public class AshigaruWalletController implements Initializable {
 
     @FXML
     private void onRefresh() {
-        if (activeAccountForm != null) {
-            activeAccountForm.refreshHistory(AppServices.getCurrentBlockHeight());
+        refreshForm(currentWalletForm);
+        if (activeAccountForm != null && activeAccountForm != currentWalletForm) {
+            refreshForm(activeAccountForm);
         }
+    }
+
+    private void refreshForm(WalletForm walletForm) {
+        if (walletForm == null) return;
+        Wallet wallet = walletForm.getWallet();
+        Wallet pastWallet = wallet.copy();
+        wallet.clearHistory();
+        AppServices.clearTransactionHistoryCache(wallet);
+        EventManager.get().post(new WalletHistoryClearedEvent(wallet, pastWallet, walletForm.getWalletId()));
     }
 
     // -------------------------------------------------------------------------
@@ -696,6 +734,10 @@ public class AshigaruWalletController implements Initializable {
             Platform.runLater(() -> {
                 refreshBtn.setDisable(false);
                 refreshBtn.setText("⟳  Refresh");
+                // Always refresh the view when a sync finishes — ensures UTXOs are shown
+                // even when the history was already current (no WalletHistoryChangedEvent fired).
+                activeAccountForm.getWalletUtxosEntry().updateUtxos();
+                refreshAccountView();
             });
         }
     }
@@ -709,15 +751,17 @@ public class AshigaruWalletController implements Initializable {
     public void whirlpoolMix(WhirlpoolMixEvent event) {
         if (activeAccountForm != null && event.getWallet().equals(activeAccountForm.getWallet())) {
             Platform.runLater(() -> {
-                // Refresh the mixes column for the affected UTXO
                 utxoRows.stream()
                         .filter(row -> row.utxoEntry.getHashIndex().equals(event.getUtxo()))
                         .findFirst()
                         .ifPresent(row -> {
-                            if (event.getMixProgress() != null) {
+                            if(event.getNextUtxo() != null) {
+                                row.utxoEntry.setNextMixUtxo(event.getNextUtxo());
+                            } else if(event.getMixFailReason() != null) {
+                                row.utxoEntry.setMixFailReason(event.getMixFailReason(), event.getMixError());
+                            } else {
                                 row.utxoEntry.setMixProgress(event.getMixProgress());
                             }
-                            // Force table refresh
                             utxoTable.refresh();
                         });
             });
@@ -752,21 +796,22 @@ public class AshigaruWalletController implements Initializable {
     // -------------------------------------------------------------------------
 
     private static Button makeCopyButton(String textToCopy) {
-        Glyph copyIcon = new Glyph(FontAwesome5.FONT_NAME, FontAwesome5.Glyph.COPY);
-        copyIcon.setFontSize(11);
-        copyIcon.setStyle("-fx-fill: #A0A0A0;");
-        Button btn = new Button("", copyIcon);
+        final String defaultStyle = "-fx-text-fill: #A0A0A0; -fx-font-family: System; -fx-font-size: 14px; -fx-text-overrun: clip;";
+        final String successStyle = "-fx-text-fill: #4CAF50; -fx-font-family: System; -fx-font-size: 14px; -fx-text-overrun: clip;";
+        Button btn = new Button("⎘");
         btn.getStyleClass().add("copy-icon-btn");
+        btn.setMinSize(28, 28);
+        btn.setPrefSize(28, 28);
+        btn.setMaxSize(28, 28);
+        btn.setStyle(defaultStyle);
         btn.setOnAction(e -> {
             ClipboardContent content = new ClipboardContent();
             content.putString(textToCopy);
             Clipboard.getSystemClipboard().setContent(content);
-            Glyph check = new Glyph(FontAwesome5.FONT_NAME, FontAwesome5.Glyph.CHECK_CIRCLE);
-            check.setFontSize(11);
-            check.setStyle("-fx-fill: #4CAF50;");
-            btn.setGraphic(check);
+            btn.setText("✓");
+            btn.setStyle(successStyle);
             PauseTransition pause = new PauseTransition(Duration.seconds(1.5));
-            pause.setOnFinished(ev -> btn.setGraphic(copyIcon));
+            pause.setOnFinished(ev -> { btn.setText("⎘"); btn.setStyle(defaultStyle); });
             pause.play();
         });
         return btn;
@@ -776,14 +821,14 @@ public class AshigaruWalletController implements Initializable {
     // Inner types
     // -------------------------------------------------------------------------
 
-    static class UtxoRow {
-        final String date, output, address, mixes, label, value;
-        final UtxoEntry utxoEntry;
+    public static class UtxoRow {
+        final String date, output, address, label, value;
+        public final UtxoEntry utxoEntry;
         final BooleanProperty selected = new SimpleBooleanProperty(false);
-        UtxoRow(String date, String output, String address, String mixes,
+        UtxoRow(String date, String output, String address,
                 String label, String value, UtxoEntry utxoEntry) {
             this.date = date; this.output = output; this.address = address;
-            this.mixes = mixes; this.label = label; this.value = value;
+            this.label = label; this.value = value;
             this.utxoEntry = utxoEntry;
         }
     }

@@ -225,6 +225,10 @@ public class Whirlpool {
 
         try {
             WhirlpoolUtxo whirlpoolUtxo = whirlpoolWalletService.whirlpoolWallet().getUtxoSupplier().findUtxo(utxo.getHashAsString(), (int)utxo.getIndex());
+            if(whirlpoolUtxo == null) {
+                throw new WhirlpoolException("UTXO " + utxo.getHashAsString() + ":" + utxo.getIndex()
+                        + " not tracked by Whirlpool engine. It may already have been spent or be below the smallest pool denomination.");
+            }
             whirlpoolWalletService.whirlpoolWallet().mix(whirlpoolUtxo);
         } catch(Exception e) {
             throw new WhirlpoolException(e.getMessage(), e);
