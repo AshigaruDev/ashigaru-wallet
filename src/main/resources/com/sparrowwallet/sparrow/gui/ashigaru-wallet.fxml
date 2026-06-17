@@ -54,6 +54,8 @@
         <ToggleButton fx:id="utxoViewBtn"  text="UTXOs"        onAction="#onViewToggle" styleClass="view-toggle-btn" selected="true"/>
         <ToggleButton fx:id="txnViewBtn"   text="Transactions" onAction="#onViewToggle" styleClass="view-toggle-btn"/>
         <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="selectAllUtxosBtn" text="Select All UTXOs" onAction="#onSelectAllUtxos"
+                styleClass="action-btn" visible="false" managed="false"/>
         <Button fx:id="mixSelectedBtn" text="Mix Selected UTXOs" onAction="#onMixSelected"
                 styleClass="primary-btn mix-btn" visible="false" managed="false"/>
     </HBox>
@@ -69,6 +71,7 @@
             <TableColumn fx:id="colAddress" text="Address" prefWidth="240" minWidth="160"/>
             <TableColumn fx:id="colLabel"   text="Label"   prefWidth="160" minWidth="100"/>
             <TableColumn fx:id="colMixes"   text="Mixes"   prefWidth="90"  minWidth="70"/>
+            <TableColumn fx:id="colMixStage" text="Stage"  prefWidth="180" minWidth="130"/>
             <TableColumn fx:id="colValue"   text="Value"   prefWidth="160" minWidth="120"/>
         </columns>
         <placeholder>

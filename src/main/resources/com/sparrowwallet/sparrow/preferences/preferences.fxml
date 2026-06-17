@@ -1,31 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
-<?import javafx.geometry.Insets?>
 <?import com.sparrowwallet.sparrow.preferences.PreferenceGroup?>
 <?import org.controlsfx.glyphfont.Glyph?>
-<BorderPane stylesheets="@../general.css, @preferences.css" styleClass="line-border" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.sparrowwallet.sparrow.preferences.PreferencesController">
+
+<BorderPane stylesheets="@../general.css, @../gui/ashigaru.css, @preferences.css" styleClass="preferences-root" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.sparrowwallet.sparrow.preferences.PreferencesController">
     <left>
-        <VBox styleClass="list-menu">
-            <ToggleButton VBox.vgrow="ALWAYS" text="General" wrapText="true" textAlignment="CENTER" contentDisplay="TOP" styleClass="list-item" maxHeight="Infinity" toggleGroup="$preferencesMenu">
+        <VBox styleClass="preferences-sidebar" spacing="6">
+            <Label text="SETTINGS" styleClass="preferences-sidebar-title" />
+            <ToggleButton text="General" contentDisplay="LEFT" graphicTextGap="10" styleClass="preferences-nav-item" maxWidth="Infinity" toggleGroup="$preferencesMenu">
                 <toggleGroup>
                     <ToggleGroup fx:id="preferencesMenu" />
                 </toggleGroup>
                 <graphic>
-                    <Glyph fontFamily="Font Awesome 5 Free Solid" fontSize="20" icon="TOOLS" />
+                    <Glyph fontFamily="Font Awesome 5 Free Solid" fontSize="13" icon="TOOLS" />
                 </graphic>
                 <userData>
                     <PreferenceGroup fx:constant="GENERAL"/>
                 </userData>
             </ToggleButton>
-            <ToggleButton VBox.vgrow="ALWAYS" text="Server" wrapText="true" textAlignment="CENTER" contentDisplay="TOP" styleClass="list-item" maxHeight="Infinity" toggleGroup="$preferencesMenu">
+            <ToggleButton text="Server" contentDisplay="LEFT" graphicTextGap="10" styleClass="preferences-nav-item" maxWidth="Infinity" toggleGroup="$preferencesMenu">
                 <graphic>
-                    <Glyph fontFamily="Font Awesome 5 Free Solid" fontSize="20" icon="SERVER" />
+                    <Glyph fontFamily="Font Awesome 5 Free Solid" fontSize="13" icon="SERVER" />
                 </graphic>
                 <userData>
                     <PreferenceGroup fx:constant="SERVER"/>
@@ -34,7 +31,7 @@
         </VBox>
     </left>
     <center>
-        <StackPane fx:id="preferencesPane">
+        <StackPane fx:id="preferencesPane" styleClass="preferences-content">
 
         </StackPane>
     </center>

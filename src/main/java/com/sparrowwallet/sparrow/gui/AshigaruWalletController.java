@@ -1,6 +1,8 @@
 package com.sparrowwallet.sparrow.gui;
 
 import com.google.common.eventbus.Subscribe;
+import com.samourai.whirlpool.client.mix.listener.MixFailReason;
+import com.samourai.whirlpool.client.mix.listener.MixStep;
 import com.samourai.whirlpool.client.wallet.beans.MixProgress;
 import com.samourai.whirlpool.client.wallet.beans.Tx0FeeTarget;
 import com.samourai.whirlpool.client.whirlpool.beans.Pool;
@@ -73,6 +75,7 @@ public class AshigaruWalletController implements Initializable {
     @FXML private TableColumn<UtxoRow, String> colAddress;
     @FXML private TableColumn<UtxoRow, String> colLabel;
     @FXML private TableColumn<UtxoRow, UtxoEntry.MixStatus> colMixes;
+    @FXML private TableColumn<UtxoRow, String> colMixStage;
     @FXML private TableColumn<UtxoRow, String> colValue;
     @FXML private TableView<TxnRow> txnTable;
     @FXML private TableColumn<TxnRow, String> colTxnDate;
@@ -82,6 +85,7 @@ public class AshigaruWalletController implements Initializable {
     @FXML private HBox mixButtonBox;
     @FXML private Button startMixBtn;
     @FXML private Button mixToBtn;
+    @FXML private Button selectAllUtxosBtn;
     @FXML private Button mixSelectedBtn;
     @FXML private VBox accountPanel;
 
@@ -123,6 +127,10 @@ public class AshigaruWalletController implements Initializable {
             return e != null ? e.mixStatusProperty() : new SimpleObjectProperty<>(null);
         });
         colMixes.setCellFactory(col -> new AshigaruMixesCell());
+        colMixStage.setCellValueFactory(d -> {
+            UtxoEntry e = d.getValue().utxoEntry;
+            return new SimpleStringProperty(e != null ? getMixStage(e.getMixStatus()) : "");
+        });
         colValue.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().value));
 
         colAddress.setCellFactory(col -> new TableCell<>() {
@@ -357,6 +365,8 @@ public class AshigaruWalletController implements Initializable {
         receiveBtn.setManaged(isDeposit);
         receiveCta.setVisible(isDeposit);
         receiveCta.setManaged(isDeposit);
+        selectAllUtxosBtn.setVisible(isDeposit && utxoTable.isVisible());
+        selectAllUtxosBtn.setManaged(isDeposit && utxoTable.isVisible());
 
         // Badbank info bar
         boolean isBadbank = wallet.getStandardAccountType() == StandardAccount.WHIRLPOOL_BADBANK;
@@ -369,6 +379,7 @@ public class AshigaruWalletController implements Initializable {
 
     private void refreshUtxoTable(WalletUtxosEntry utxosEntry, boolean isMixWallet) {
         colMixes.setVisible(isMixWallet);
+        colMixStage.setVisible(isMixWallet);
 
         utxoRows.clear();
         if (utxosEntry.getChildren() == null) return;
@@ -492,6 +503,20 @@ public class AshigaruWalletController implements Initializable {
         mixSelectedBtn.setDisable(utxoRows.stream().noneMatch(r -> r.selected.get()));
     }
 
+    private void updateSelectAllButton() {
+        if (activeAccountForm == null || selectAllUtxosBtn == null) return;
+
+        Wallet wallet = activeAccountForm.getWallet();
+        boolean isDeposit = wallet.isMasterWallet() || wallet.getStandardAccountType() == null
+                || wallet.getStandardAccountType() == StandardAccount.ACCOUNT_0;
+        boolean show = isDeposit && utxoTable.isVisible();
+        selectAllUtxosBtn.setVisible(show);
+        selectAllUtxosBtn.setManaged(show);
+        boolean anySelected = utxoRows.stream().anyMatch(r -> r.selected.get());
+        selectAllUtxosBtn.setDisable(utxoRows.isEmpty());
+        selectAllUtxosBtn.setText(anySelected ? "Clear Selection" : "Select All UTXOs");
+    }
+
     private void updateActionButtons() {
         boolean utxosVisible = utxoTable.isVisible();
 
@@ -501,6 +526,7 @@ public class AshigaruWalletController implements Initializable {
             mixSelectedBtn.setVisible(true);
             updateMixSelectedButton();
         }
+        updateSelectAllButton();
     }
 
     // -------------------------------------------------------------------------
@@ -532,6 +558,14 @@ public class AshigaruWalletController implements Initializable {
         if (!showUtxos) {
             refreshTransactionTable();
         }
+        updateActionButtons();
+    }
+
+    @FXML
+    private void onSelectAllUtxos() {
+        boolean selectAll = utxoRows.stream().noneMatch(r -> r.selected.get());
+        utxoRows.forEach(r -> r.selected.set(selectAll));
+        utxoTable.refresh();
         updateActionButtons();
     }
 
@@ -815,6 +849,35 @@ public class AshigaruWalletController implements Initializable {
             pause.play();
         });
         return btn;
+    }
+
+    private static String getMixStage(UtxoEntry.MixStatus mixStatus) {
+        if (mixStatus == null) {
+            return "";
+        }
+
+        MixProgress mixProgress = mixStatus.getMixProgress();
+        if (mixProgress != null && mixProgress.getMixStep() != null) {
+            MixStep step = mixProgress.getMixStep();
+            return formatMixStep(step) + " (" + step.getProgressPercent() + "%)";
+        }
+
+        MixFailReason failReason = mixStatus.getMixFailReason();
+        if (failReason != null) {
+            return "FAILED - " + failReason.getMessage();
+        }
+
+        if (mixStatus.getNextMixUtxo() != null) {
+            return "Queued for next mix";
+        }
+
+        return "";
+    }
+
+    private static String formatMixStep(MixStep step) {
+        return Arrays.stream(step.name().split("_"))
+                .map(part -> part.substring(0, 1) + part.substring(1).toLowerCase(Locale.ROOT))
+                .collect(Collectors.joining(" "));
     }
 
     // -------------------------------------------------------------------------

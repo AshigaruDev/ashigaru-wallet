@@ -103,15 +103,21 @@ public class AshigaruGui extends Application {
         AppServices.get().start();
 
         if (Config.get().getMode() != Mode.ONLINE) {
+            setSplashStatus(splashStage, "Offline mode enabled. Opening workspace...");
             PauseTransition offlineDelay = new PauseTransition(Duration.seconds(3));
             offlineDelay.setOnFinished(e -> revealMain.run());
             offlineDelay.play();
         } else {
+            setSplashStatus(splashStage, "Starting network services...");
             PauseTransition timeout = new PauseTransition(Duration.seconds(30));
-            timeout.setOnFinished(e -> revealMain.run());
+            timeout.setOnFinished(e -> {
+                setSplashStatus(splashStage, "Opening workspace while network connects...");
+                revealMain.run();
+            });
 
             AppServices.onlineProperty().addListener((obs, wasOnline, isOnline) -> {
                 if (isOnline) {
+                    setSplashStatus(splashStage, "Connected. Opening workspace...");
                     timeout.stop();
                     revealMain.run();
                 }
@@ -139,6 +145,15 @@ public class AshigaruGui extends Application {
         } catch (Exception e) {
             log.warn("Could not load splash screen", e);
             return null;
+        }
+    }
+
+    private void setSplashStatus(Stage splashStage, String message) {
+        if (splashStage == null) return;
+
+        Object userData = splashStage.getUserData();
+        if (userData instanceof AshigaruSplashController ctrl) {
+            Platform.runLater(() -> ctrl.setStatus(message));
         }
     }
 
