@@ -15,9 +15,9 @@
 <?import com.sparrowwallet.sparrow.control.HelpLabel?>
 <?import com.sparrowwallet.sparrow.net.FeeRatesSource?>
 
-<GridPane hgap="10.0" vgap="10.0" stylesheets="@preferences.css, @../general.css" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sparrowwallet.sparrow.preferences.GeneralPreferencesController">
+<GridPane hgap="10.0" vgap="14.0" stylesheets="@../general.css, @../gui/ashigaru.css, @preferences.css" styleClass="preferences-detail" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sparrowwallet.sparrow.preferences.GeneralPreferencesController">
     <padding>
-        <Insets left="25.0" right="25.0" top="25.0" />
+        <Insets left="28.0" right="32.0" top="24.0" bottom="28.0" />
     </padding>
     <columnConstraints>
         <ColumnConstraints percentWidth="100" />
@@ -26,7 +26,12 @@
         <RowConstraints />
     </rowConstraints>
 
-    <Form GridPane.columnIndex="0" GridPane.rowIndex="0">
+    <VBox GridPane.columnIndex="0" GridPane.rowIndex="0" spacing="6">
+        <Label text="General" styleClass="preferences-section-title" />
+        <Label text="Control wallet defaults, fee sources, coin selection, and notifications." wrapText="true" styleClass="preferences-section-subtitle" />
+    </VBox>
+
+    <Form GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="preferences-form">
         <Fieldset inputGrow="SOMETIMES" text="Bitcoin" styleClass="wideLabelFieldSet">
             <Field text="Fee rates source:">
                 <ComboBox fx:id="feeRatesSource">
