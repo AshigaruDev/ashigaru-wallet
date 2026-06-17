@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
@@ -6,14 +7,34 @@
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="com.sparrowwallet.sparrow.gui.AshigaruSplashController"
            styleClass="splash-pane" prefWidth="600" prefHeight="400">
-    <VBox alignment="CENTER" spacing="20">
-        <ImageView fitWidth="120" fitHeight="120" preserveRatio="true">
-            <image>
-                <Image url="@/image/Ashigaru_Terminal_Logo_Circle.png"/>
-            </image>
-        </ImageView>
-        <Label text="Ashigaru" styleClass="splash-title"/>
-        <Label fx:id="statusLabel" text="Initializing…" styleClass="splash-status"/>
-        <ProgressBar fx:id="progressBar" prefWidth="240" progress="-1" styleClass="splash-progress"/>
+    <VBox alignment="CENTER" spacing="22" styleClass="splash-card" maxWidth="420" maxHeight="270">
+        <padding>
+            <Insets top="30" right="34" bottom="30" left="34" />
+        </padding>
+
+        <HBox alignment="CENTER_LEFT" spacing="18">
+            <StackPane styleClass="splash-logo-frame">
+                <ImageView fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="@/image/Ashigaru_Terminal_Logo_Circle.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <VBox spacing="5" alignment="CENTER_LEFT">
+                <Label text="Ashigaru" styleClass="splash-title"/>
+                <Label text="Desktop Wallet" styleClass="splash-subtitle"/>
+            </VBox>
+        </HBox>
+
+        <VBox spacing="8" maxWidth="Infinity">
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <Label text="STATUS" styleClass="splash-caption"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="STARTUP" styleClass="splash-chip"/>
+            </HBox>
+            <Label fx:id="statusLabel" text="Initializing application services" styleClass="splash-status" maxWidth="Infinity"/>
+            <ProgressBar fx:id="progressBar" maxWidth="Infinity" progress="-1" styleClass="splash-progress"/>
+        </VBox>
     </VBox>
 </StackPane>
