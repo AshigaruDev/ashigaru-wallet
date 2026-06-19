@@ -13,7 +13,7 @@
   <key>CFBundleIconFile</key>
   <string>ashigaru</string>
   <key>CFBundleIdentifier</key>
-  <string>com.ashigaru.terminal</string>
+  <string>com.ashigaru.desktop</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
@@ -29,7 +29,7 @@
   <key>CFBundleVersion</key>
   <string>100</string>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright (C) 2024 Ashigaru Project</string>
+  <string>Copyright (C) 2026 Ashigaru Open Source Project</string>
   <key>NSHighResolutionCapable</key>
   <string>true</string>
   <key>NSCameraUsageDescription</key>
@@ -38,7 +38,7 @@
   <array>
       <dict>
           <key>CFBundleURLName</key>
-          <string>com.ashigaru.terminal.bitcoin</string>
+          <string>com.ashigaru.desktop.bitcoin</string>
           <key>CFBundleURLSchemes</key>
           <array>
             <string>bitcoin</string>
@@ -46,7 +46,7 @@
       </dict>
       <dict>
           <key>CFBundleURLName</key>
-          <string>com.ashigaru.terminal.auth47</string>
+          <string>com.ashigaru.desktop.auth47</string>
           <key>CFBundleURLSchemes</key>
           <array>
             <string>auth47</string>
@@ -54,7 +54,7 @@
       </dict>
       <dict>
           <key>CFBundleURLName</key>
-          <string>com.ashigaru.terminal.lightning</string>
+          <string>com.ashigaru.desktop.lightning</string>
           <key>CFBundleURLSchemes</key>
           <array>
             <string>lightning</string>

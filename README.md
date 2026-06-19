@@ -26,8 +26,8 @@ Pre-built binaries for every platform are published on the [Releases](../../rele
 | Platform | Package | Min OS | Notarized |
 |---|---|---|---|
 | Windows | `.exe` installer, `.msi` | Windows 10 | — |
-| macOS (Apple Silicon) | `Ashigaru-X.Y.Z-aarch64.dmg` | macOS 11.0 | nightly: no · stable: yes |
-| macOS (Intel) | `Ashigaru-X.Y.Z-x86_64.dmg` | macOS 11.0 | nightly: no · stable: yes |
+| macOS (Apple Silicon) | `Ashigaru-X.Y.Z-aarch64.dmg` | macOS 11.0 | No, ad-hoc signed |
+| macOS (Intel) | `Ashigaru-X.Y.Z-x86_64.dmg` | macOS 11.0 | No, ad-hoc signed |
 | Linux (desktop) | `.deb`, `.rpm`, `.tar.gz`, `.AppImage` | — | — |
 | Linux (headless / server) | `ashigaru-server` `.deb`, `.rpm` | — | — |
 
@@ -35,7 +35,7 @@ Each release also includes `SHA256SUMS`, `MESSAGE.txt`, and `RELEASE-BIP47-SIGNA
 
 **macOS installation**
 
-Requires macOS 11.0 (Big Sur) or later. Nightly/dev builds are not notarized. On macOS Ventura and later, Gatekeeper is stricter for quarantined, non-notarized apps downloaded from the internet — ad-hoc signing alone does not satisfy trust requirements, and you may see "damaged and can't be opened" or a blocked launch. This can also indicate a bad signature or packaging issue, so verify the file hash first (see *Verifying a release* below).
+Requires macOS 11.0 (Big Sur) or later. macOS builds are ad-hoc signed but not Developer ID signed or notarized. On macOS Ventura and later, Gatekeeper is stricter for quarantined, non-notarized apps downloaded from the internet — ad-hoc signing alone does not satisfy trust requirements, and you may see "damaged and can't be opened" or a blocked launch. This can also indicate a bad signature or packaging issue, so verify the file hash first (see *Verifying a release* below).
 
 If the hash checks out, two options:
 
@@ -61,7 +61,7 @@ xattr -rd com.apple.quarantine /Applications/Ashigaru.app
 
 After a blocked launch attempt, go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Ashigaru entry.
 
-> **Stable releases** will ship Developer ID signed and notarized, which removes this friction entirely.
+> Developer ID signing and notarization require an Apple Developer Program account. Current macOS packages are ad-hoc signed only, which is common for open-source desktop applications distributed without a paid Apple license.
 
 ---
 
