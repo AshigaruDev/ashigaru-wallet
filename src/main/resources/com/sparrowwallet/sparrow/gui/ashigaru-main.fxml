@@ -71,11 +71,13 @@
             <!-- Spacer fills remaining height -->
             <Region VBox.vgrow="ALWAYS"/>
 
-            <!-- ── PREFERENCES (always visible, bottom) ─────────────── -->
+            <!-- ── TOOLS + SETTINGS (always visible, bottom) ─────────── -->
             <Separator/>
             <VBox spacing="8" styleClass="sidebar-actions">
                 <padding><Insets top="10" right="12" bottom="12" left="12"/></padding>
-                <Button text="Preferences…" onAction="#onPreferences"
+                <Button text="Tools" onAction="#onTools"
+                        maxWidth="Infinity" styleClass="action-btn secondary-btn"/>
+                <Button text="Settings" onAction="#onPreferences"
                         maxWidth="Infinity" styleClass="action-btn secondary-btn"/>
             </VBox>
 

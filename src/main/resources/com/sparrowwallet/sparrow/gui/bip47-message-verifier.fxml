@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.sparrowwallet.sparrow.gui.Bip47MessageVerifierController"
+            stylesheets="@ashigaru.css"
+            styleClass="wallet-panel"
+            fitToWidth="true">
+    <content>
+        <VBox spacing="16" styleClass="verifier-panel">
+            <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+
+            <VBox spacing="4">
+                <Label text="Verify BIP47 Message" styleClass="account-name-label"/>
+                <Label text="Verify that a Bitcoin message signature matches the notification address derived from a BIP47 payment code." wrapText="true" styleClass="field-label"/>
+            </VBox>
+
+            <VBox spacing="8">
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                    <Label text="BIP47 Payment Code" styleClass="section-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="releaseCodeBtn" text="Use Release Signing Code" onAction="#onUseReleaseCode" styleClass="secondary-btn"/>
+                </HBox>
+                <TextArea fx:id="paymentCodeArea" prefRowCount="3" wrapText="true" promptText="PM8T..."/>
+            </VBox>
+
+            <VBox spacing="8">
+                <Label text="Signed Message Block (Optional)" styleClass="section-title"/>
+                <Label text="Paste a full Bitcoin signed message block here, or leave blank and use the Message and Signature fields below." wrapText="true" styleClass="field-label"/>
+                <TextArea fx:id="signedBlockArea" prefRowCount="7" wrapText="false" promptText="-----BEGIN BITCOIN SIGNED MESSAGE-----"/>
+                <Button text="Parse Signed Block" onAction="#onParseSignedBlock" styleClass="secondary-btn"/>
+            </VBox>
+
+            <VBox spacing="8" VBox.vgrow="ALWAYS">
+                <Label text="Message" styleClass="section-title"/>
+                <TextArea fx:id="messageArea" prefRowCount="6" wrapText="true" VBox.vgrow="ALWAYS" promptText="Message that was signed"/>
+            </VBox>
+
+            <VBox spacing="8">
+                <Label text="Base64 Signature" styleClass="section-title"/>
+                <TextArea fx:id="signatureArea" prefRowCount="3" wrapText="true" promptText="H9..."/>
+            </VBox>
+
+            <VBox fx:id="resultBox" spacing="6" visible="false" managed="false" styleClass="verifier-result-box">
+                <Label fx:id="resultTitleLabel" styleClass="verifier-result-title"/>
+                <Label fx:id="notificationAddressLabel" wrapText="true" styleClass="field-value"/>
+                <Label fx:id="signerAddressLabel" wrapText="true" styleClass="field-value"/>
+            </VBox>
+
+            <HBox alignment="CENTER_RIGHT" spacing="10">
+                <Button text="Verify Message" onAction="#onVerify" styleClass="primary-btn"/>
+            </HBox>
+        </VBox>
+    </content>
+</ScrollPane>
