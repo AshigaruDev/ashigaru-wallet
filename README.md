@@ -28,7 +28,7 @@ Pre-built binaries for every platform are published on the [Releases](../../rele
 | Windows | `.exe` installer, `.msi` | Windows 10 | — |
 | macOS (Apple Silicon) | `Ashigaru-X.Y.Z-aarch64.dmg` | macOS 11.0 | nightly: no · stable: yes |
 | macOS (Intel) | `Ashigaru-X.Y.Z-x86_64.dmg` | macOS 11.0 | nightly: no · stable: yes |
-| Linux (desktop) | `.deb`, `.rpm`, `.tar.gz` | — | — |
+| Linux (desktop) | `.deb`, `.rpm`, `.tar.gz`, `.AppImage` | — | — |
 | Linux (headless / server) | `ashigaru-server` `.deb`, `.rpm` | — | — |
 
 Each release also includes `SHA256SUMS`, `MESSAGE.txt`, and `RELEASE-BIP47-SIGNATURE.txt` for verification.
@@ -108,6 +108,20 @@ cd ashigaru-desktop
 ```
 
 The packaged application is written to `build/jpackage/`.
+
+Additional distribution archives can be built with:
+
+```bash
+./gradlew packageZipDistribution packageTarDistribution
+```
+
+On Linux, an AppImage can be built with:
+
+```bash
+./gradlew packageAppImage
+```
+
+The AppImage task downloads `appimagetool` from the official AppImageKit continuous release and writes the package to `build/distributions/`.
 
 For proving reproducibility, see docs [here](docs/ReproducibleBuilds.md).
 
