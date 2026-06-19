@@ -67,9 +67,16 @@ After a blocked launch attempt, go to **System Settings → Privacy & Security**
 
 ### Verifying a release
 
-Every release is signed by the developer using a BIP47 notification key. Verification is a three-step process with no special tooling required.
+Every release is signed by the maintainer using the private key for the notification address derived from the Ashigaru release-signing BIP47 Payment Code. This lets users verify that the release message was signed by the owner of the payment code, without exposing private keys.
 
-**Notification address:** `<NOTIFICATION_ADDRESS>`
+**Release signing identity**
+
+- **PayNym:** https://paynym.rs/+linkinparkrulz
+- **BIP47 Payment Code:**
+
+```text
+PM8TJM51x2mDd85CzEgVc2y7vdyB3eBj93JVjVtCt6PZtmfzhFzYPMXYBXh28zthWhVKGjVQZPT1MKxGxEtfenLYEkuc5GhoWtMzQCF8c8mrckYFM7r1
+```
 
 **Step 1 — Verify the file hash**
 
@@ -89,11 +96,13 @@ Compare the output against the `SHA256(SHA256SUMS): ...` line inside `MESSAGE.tx
 
 **Step 3 — Verify the Bitcoin message signature**
 
-Open `RELEASE-BIP47-SIGNATURE.txt`. The file contains the signed statement and a base64 signature. Verify using any Bitcoin message verifier (Ashigaru, https://paymentcode.io/lab, https://pajasevi.github.io/bip47-verifier/) with:
+Open `RELEASE-BIP47-SIGNATURE.txt`. The file contains the release signing payment code, PayNym, and a base64 Bitcoin message signature. Verify using Ashigaru Mobile or a BIP47 message verifier such as https://paymentcode.io/lab with:
 
-- **Payment Code**: the payment code that is the supposed identity
-- **Message**: the content of `MESSAGE.txt` (verbatim, no trailing newline changes)
+- **Payment Code**: the release signing payment code above
+- **Message**: the exact contents of `MESSAGE.txt`
 - **Signature**: the base64 value from `RELEASE-BIP47-SIGNATURE.txt`
+
+The verifier derives the notification address from the payment code and checks the Bitcoin message signature against that address. Make sure the payment code in `RELEASE-BIP47-SIGNATURE.txt` matches the payment code published here.
 
 ---
 
