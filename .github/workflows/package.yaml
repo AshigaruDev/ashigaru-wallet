@@ -66,6 +66,10 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: ./gradlew packageTarDistribution
 
+      - name: Package AppImage distribution (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: ./gradlew packageAppImage
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:

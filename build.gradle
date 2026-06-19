@@ -325,6 +325,7 @@ exec "$HERE/usr/bin/Ashigaru" "$@"
         }
         environment 'ARCH', appImageArch
         environment 'VERSION', ashigaruTerminalVersion
+        environment 'APPIMAGE_EXTRACT_AND_RUN', '1'
         commandLine appImageTool.absolutePath, appImageDir.absolutePath, outputFile.absolutePath
     }
 }

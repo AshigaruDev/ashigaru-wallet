@@ -68,6 +68,10 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: ./gradlew packageTarDistribution
 
+      - name: Package AppImage distribution (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: ./gradlew packageAppImage
+
       - name: Rename macOS DMG (arm64)
         if: ${{ matrix.artifact-name == 'macOS-arm64' }}
         run: mv build/jpackage/*.dmg build/jpackage/Ashigaru-${VERSION}-aarch64.dmg
