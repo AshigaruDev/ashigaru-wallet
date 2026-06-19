@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.controlsfx.glyphfont.Glyph?>
+
+<BorderPane stylesheets="@../general.css, @ashigaru.css, @../preferences/preferences.css" styleClass="preferences-root" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.sparrowwallet.sparrow.gui.ToolsController">
+    <left>
+        <VBox styleClass="preferences-sidebar" spacing="6">
+            <Label text="TOOLS" styleClass="preferences-sidebar-title" />
+            <ToggleButton fx:id="bip47VerifierButton" text="Verify BIP47 Message" contentDisplay="LEFT" graphicTextGap="10" styleClass="preferences-nav-item" maxWidth="Infinity" toggleGroup="$toolsMenu">
+                <toggleGroup>
+                    <ToggleGroup fx:id="toolsMenu" />
+                </toggleGroup>
+                <graphic>
+                    <Glyph fontFamily="Font Awesome 5 Free Solid" fontSize="13" icon="CHECK_CIRCLE" />
+                </graphic>
+            </ToggleButton>
+        </VBox>
+    </left>
+    <center>
+        <StackPane fx:id="toolsPane" styleClass="preferences-content">
+
+        </StackPane>
+    </center>
+</BorderPane>

@@ -520,6 +520,45 @@ public class AshigaruMainController implements Initializable {
     }
 
     @FXML
+    private void onTools() {
+        try {
+            FXMLLoader loader = new FXMLLoader(AppServices.class.getResource("gui/tools.fxml"));
+            Node toolsPanel = loader.load();
+
+            Button backBtn = new Button("← Back");
+            backBtn.setOnAction(e -> closeTool());
+            backBtn.getStyleClass().add("prefs-back-btn");
+
+            Label pageTitle = new Label("Tools");
+            pageTitle.getStyleClass().add("prefs-page-title");
+
+            HBox pageHeader = new HBox(16, backBtn, pageTitle);
+            pageHeader.setAlignment(Pos.CENTER_LEFT);
+            pageHeader.getStyleClass().add("prefs-page-header");
+            pageHeader.setPadding(new Insets(8, 16, 8, 16));
+
+            VBox.setVgrow(toolsPanel, Priority.ALWAYS);
+            VBox wrapper = new VBox(pageHeader, toolsPanel);
+
+            contentPane.setCenter(wrapper);
+            contentPane.setUserData(loader.getController());
+        } catch(IOException e) {
+            log.error("Error opening tools", e);
+            showError("Error", "Could not open tools: " + e.getMessage());
+        }
+    }
+
+    private void closeTool() {
+        contentPane.setUserData(null);
+        WalletListItem selected = walletSelector.getSelectionModel().getSelectedItem();
+        if(selected != null && selected.isLoaded()) {
+            selectWallet(selected.walletId());
+        } else {
+            showWelcome();
+        }
+    }
+
+    @FXML
     private void onPreferences() {
         walletSelector.getSelectionModel().clearSelection();
         try {
@@ -534,7 +573,7 @@ public class AshigaruMainController implements Initializable {
             backBtn.setOnAction(e -> closePreferences());
             backBtn.getStyleClass().add("prefs-back-btn");
 
-            Label pageTitle = new Label("Preferences");
+            Label pageTitle = new Label("Settings");
             pageTitle.getStyleClass().add("prefs-page-title");
 
             HBox pageHeader = new HBox(16, backBtn, pageTitle);

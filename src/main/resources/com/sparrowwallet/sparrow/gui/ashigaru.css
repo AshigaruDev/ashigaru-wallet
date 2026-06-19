@@ -627,3 +627,37 @@
     -fx-background-insets: 0;
     -fx-background-radius: 100;
 }
+
+/* ── BIP47 message verifier ─────────────────────── */
+.verifier-panel .text-area {
+    -fx-font-family: "RobotoMono Regular", "Monospaced", monospace;
+    -fx-font-size: 12px;
+}
+.verifier-result-box {
+    -fx-background-color: -ag-bg-mid;
+    -fx-border-color: -ag-border;
+    -fx-border-width: 1;
+    -fx-border-radius: -ag-radius;
+    -fx-background-radius: -ag-radius;
+    -fx-padding: 12;
+}
+.verifier-result-success {
+    -fx-border-color: -ag-green;
+}
+.verifier-result-error {
+    -fx-border-color: -ag-accent;
+}
+.verifier-result-info {
+    -fx-border-color: -ag-border;
+}
+.verifier-result-title {
+    -fx-text-fill: -ag-text;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+.verifier-result-success .verifier-result-title {
+    -fx-text-fill: -ag-green;
+}
+.verifier-result-error .verifier-result-title {
+    -fx-text-fill: -ag-accent;
+}
