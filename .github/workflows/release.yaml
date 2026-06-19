@@ -68,6 +68,10 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: ./gradlew packageTarDistribution
 
+      - name: Package AppImage distribution (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: ./gradlew packageAppImage
+
       - name: Rename macOS DMG (arm64)
         if: ${{ matrix.artifact-name == 'macOS-arm64' }}
         run: mv build/jpackage/*.dmg build/jpackage/Ashigaru-${VERSION}-aarch64.dmg
@@ -196,10 +200,40 @@ jobs:
           printf '%s\n' \
             "Ashigaru release attestation" \
             "Repo: github.com/linkinparkrulz/ashigaru-desktop" \
+            "Version: ${VERSION}" \
             "Tag: ${GITHUB_REF_NAME}" \
             "Commit: ${GITHUB_SHA}" \
             "SHA256(SHA256SUMS): ${SUMS_HASH}" \
             > MESSAGE.txt
+
+      - name: Generate release signing instructions
+        run: |
+          cd release-assets
+          cat > RELEASE-SIGNING-INSTRUCTIONS.txt <<'EOF'
+          Release signing instructions
+
+          1. Download MESSAGE.txt from this draft release.
+          2. Sign the exact contents of MESSAGE.txt using the private key for the notification address derived from this BIP47 Payment Code:
+
+             PM8TJM51x2mDd85CzEgVc2y7vdyB3eBj93JVjVtCt6PZtmfzhFzYPMXYBXh28zthWhVKGjVQZPT1MKxGxEtfenLYEkuc5GhoWtMzQCF8c8mrckYFM7r1
+
+          3. Create RELEASE-BIP47-SIGNATURE.txt with this format:
+
+             BIP47 Payment Code:
+             PM8TJM51x2mDd85CzEgVc2y7vdyB3eBj93JVjVtCt6PZtmfzhFzYPMXYBXh28zthWhVKGjVQZPT1MKxGxEtfenLYEkuc5GhoWtMzQCF8c8mrckYFM7r1
+
+             PayNym:
+             https://paynym.rs/+linkinparkrulz
+
+             Signature:
+             <base64 signature>
+
+             Signed message:
+             The exact contents of MESSAGE.txt.
+
+          4. Upload RELEASE-BIP47-SIGNATURE.txt to this draft release.
+          5. Publish the release.
+          EOF
 
       - name: Create draft GitHub release
         uses: softprops/action-gh-release@v2

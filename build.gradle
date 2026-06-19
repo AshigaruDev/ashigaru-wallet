@@ -273,6 +273,63 @@ task packageTarDistribution(type: Tar, dependsOn: jpackageImage) {
     into('Ashigaru')
 }
 
+if (os.linux) {
+    def appImageArch = releaseArch == 'aarch64' ? 'aarch64' : 'x86_64'
+    def appImageTool = file("${buildDir}/tools/appimagetool-${appImageArch}.AppImage")
+    def appImageDir = file("${buildDir}/appimage/Ashigaru.AppDir")
+
+    task downloadAppImageTool {
+        outputs.file(appImageTool)
+        doLast {
+            appImageTool.parentFile.mkdirs()
+            if (!appImageTool.exists()) {
+                new URL("https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${appImageArch}.AppImage")
+                    .withInputStream { input -> appImageTool.withOutputStream { output -> output << input } }
+            }
+            appImageTool.setExecutable(true)
+        }
+    }
+
+    task prepareAppImage(type: Sync, dependsOn: jpackageImage) {
+        into(appImageDir)
+
+        from("${buildDir}/jpackage/Ashigaru") {
+            into('usr')
+        }
+        from('src/main/deploy/package/linux/Ashigaru.desktop') {
+            into('.')
+            filter { line -> line.startsWith('Exec=') ? 'Exec=Ashigaru %U' : line }
+        }
+        from('src/main/deploy/package/linux/Ashigaru.png') {
+            into('.')
+        }
+        from('src/main/deploy/package/linux/Ashigaru.png') {
+            into('usr/share/icons/hicolor/256x256/apps')
+        }
+
+        doLast {
+            file("${appImageDir}/AppRun").text = '''#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/Ashigaru" "$@"
+'''
+            file("${appImageDir}/AppRun").setExecutable(true)
+        }
+    }
+
+    task packageAppImage(type: Exec, dependsOn: [prepareAppImage, downloadAppImageTool]) {
+        def outputFile = file("${buildDir}/distributions/Ashigaru-${ashigaruTerminalVersion}-${releaseArch}.AppImage")
+        outputs.file(outputFile)
+        doFirst {
+            outputFile.parentFile.mkdirs()
+            delete(outputFile)
+        }
+        environment 'ARCH', appImageArch
+        environment 'VERSION', ashigaruTerminalVersion
+        environment 'APPIMAGE_EXTRACT_AND_RUN', '1'
+        commandLine appImageTool.absolutePath, appImageDir.absolutePath, outputFile.absolutePath
+    }
+}
+
 extraJavaModuleInfo {
     module('jackson-core-2.13.2.jar', 'com.fasterxml.jackson.core', '2.13.2') {
         exports('com.fasterxml.jackson.core')

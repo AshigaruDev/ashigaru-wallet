@@ -26,16 +26,16 @@ Pre-built binaries for every platform are published on the [Releases](../../rele
 | Platform | Package | Min OS | Notarized |
 |---|---|---|---|
 | Windows | `.exe` installer, `.msi` | Windows 10 | — |
-| macOS (Apple Silicon) | `Ashigaru-X.Y.Z-aarch64.dmg` | macOS 11.0 | nightly: no · stable: yes |
-| macOS (Intel) | `Ashigaru-X.Y.Z-x86_64.dmg` | macOS 11.0 | nightly: no · stable: yes |
-| Linux (desktop) | `.deb`, `.rpm`, `.tar.gz` | — | — |
+| macOS (Apple Silicon) | `Ashigaru-X.Y.Z-aarch64.dmg` | macOS 11.0 | No, ad-hoc signed |
+| macOS (Intel) | `Ashigaru-X.Y.Z-x86_64.dmg` | macOS 11.0 | No, ad-hoc signed |
+| Linux (desktop) | `.deb`, `.rpm`, `.tar.gz`, `.AppImage` | — | — |
 | Linux (headless / server) | `ashigaru-server` `.deb`, `.rpm` | — | — |
 
 Each release also includes `SHA256SUMS`, `MESSAGE.txt`, and `RELEASE-BIP47-SIGNATURE.txt` for verification.
 
 **macOS installation**
 
-Requires macOS 11.0 (Big Sur) or later. Nightly/dev builds are not notarized. On macOS Ventura and later, Gatekeeper is stricter for quarantined, non-notarized apps downloaded from the internet — ad-hoc signing alone does not satisfy trust requirements, and you may see "damaged and can't be opened" or a blocked launch. This can also indicate a bad signature or packaging issue, so verify the file hash first (see *Verifying a release* below).
+Requires macOS 11.0 (Big Sur) or later. macOS builds are ad-hoc signed but not Developer ID signed or notarized. On macOS Ventura and later, Gatekeeper is stricter for quarantined, non-notarized apps downloaded from the internet — ad-hoc signing alone does not satisfy trust requirements, and you may see "damaged and can't be opened" or a blocked launch. This can also indicate a bad signature or packaging issue, so verify the file hash first (see *Verifying a release* below).
 
 If the hash checks out, two options:
 
@@ -61,15 +61,22 @@ xattr -rd com.apple.quarantine /Applications/Ashigaru.app
 
 After a blocked launch attempt, go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Ashigaru entry.
 
-> **Stable releases** will ship Developer ID signed and notarized, which removes this friction entirely.
+> Developer ID signing and notarization require an Apple Developer Program account. Current macOS packages are ad-hoc signed only, which is common for open-source desktop applications distributed without a paid Apple license.
 
 ---
 
 ### Verifying a release
 
-Every release is signed by the developer using a BIP47 notification key. Verification is a three-step process with no special tooling required.
+Every release is signed by the maintainer using the private key for the notification address derived from the Ashigaru release-signing BIP47 Payment Code. This lets users verify that the release message was signed by the owner of the payment code, without exposing private keys.
 
-**Notification address:** `<NOTIFICATION_ADDRESS>`
+**Release signing identity**
+
+- **PayNym:** https://paynym.rs/+linkinparkrulz
+- **BIP47 Payment Code:**
+
+```text
+PM8TJM51x2mDd85CzEgVc2y7vdyB3eBj93JVjVtCt6PZtmfzhFzYPMXYBXh28zthWhVKGjVQZPT1MKxGxEtfenLYEkuc5GhoWtMzQCF8c8mrckYFM7r1
+```
 
 **Step 1 — Verify the file hash**
 
@@ -89,11 +96,13 @@ Compare the output against the `SHA256(SHA256SUMS): ...` line inside `MESSAGE.tx
 
 **Step 3 — Verify the Bitcoin message signature**
 
-Open `RELEASE-BIP47-SIGNATURE.txt`. The file contains the signed statement and a base64 signature. Verify using any Bitcoin message verifier (Ashigaru, https://paymentcode.io/lab, https://pajasevi.github.io/bip47-verifier/) with:
+Open `RELEASE-BIP47-SIGNATURE.txt`. The file contains the release signing payment code, PayNym, and a base64 Bitcoin message signature. Verify using Ashigaru Mobile or a BIP47 message verifier such as https://paymentcode.io/lab with:
 
-- **Payment Code**: the payment code that is the supposed identity
-- **Message**: the content of `MESSAGE.txt` (verbatim, no trailing newline changes)
+- **Payment Code**: the release signing payment code above
+- **Message**: the exact contents of `MESSAGE.txt`
 - **Signature**: the base64 value from `RELEASE-BIP47-SIGNATURE.txt`
+
+The verifier derives the notification address from the payment code and checks the Bitcoin message signature against that address. Make sure the payment code in `RELEASE-BIP47-SIGNATURE.txt` matches the payment code published here.
 
 ---
 
@@ -108,6 +117,20 @@ cd ashigaru-desktop
 ```
 
 The packaged application is written to `build/jpackage/`.
+
+Additional distribution archives can be built with:
+
+```bash
+./gradlew packageZipDistribution packageTarDistribution
+```
+
+On Linux, an AppImage can be built with:
+
+```bash
+./gradlew packageAppImage
+```
+
+The AppImage task downloads `appimagetool` from the official AppImageKit continuous release and writes the package to `build/distributions/`.
 
 For proving reproducibility, see docs [here](docs/ReproducibleBuilds.md).
 
