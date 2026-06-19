@@ -1,6 +1,6 @@
 # Ashigaru Desktop
 
-A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](https://ashigaru.rs) hardware, providing a full Whirlpool coinjoin experience.
+A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](https://ashigaru.rs), providing a full Whirlpool coinjoin experience.
 
 ---
 
@@ -10,11 +10,14 @@ A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](htt
 - **Tor** — built-in Tor support for network privacy
 - **Mix To** — Set to mix to an offline or different wallet
 - **Receive Only** — Decreases attack surface (spend is done on mobile)
+- **Import/Export Labels** — Transport your labels to any BIP-329 adhering wallet software
+- **BIP47 Message Verifier** — Verify that a message was signed by a specific entity
 
 ### Future Features
 
 - **Eigenwallet Integration** — Post bad bank funds for atomic swap into XMR
-- **AmIExposed or BitHypha UTXO analysis** — Do analysis on your own UTXO's 
+- **AmIExposed or BitHypha UTXO analysis** — Do analysis on your own UTXO's
+- **Dojo Bay Integration** — Connect to geographically dispersed electrum servers with BIP47 Verified reputations. 
 - **Dojo Integration** — Get all the benefits of Dojo such as Nextblock estimates, personal electrum server detail and more
 
 ---
