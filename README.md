@@ -74,7 +74,7 @@ Every release is signed by the maintainer using the private key for the notifica
 
 **Release signing identity**
 
-- **PayNym:** https://paynym.rs/+linkinparkrulz
+- **PayNym:** https://paynym.rs/+AshigaruDev
 - **BIP47 Payment Code:**
 
 ```text
@@ -114,7 +114,7 @@ The verifier derives the notification address from the payment code and checks t
 Requires JDK 21 (Temurin recommended).
 
 ```bash
-git clone --recursive https://github.com/linkinparkrulz/Ashigaru-desktop.git
+git clone --recursive https://github.com/AshigaruDev/Ashigaru-desktop.git
 cd Ashigaru-desktop
 ./gradlew jpackage
 ```
