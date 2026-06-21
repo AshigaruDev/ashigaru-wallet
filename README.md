@@ -1,6 +1,6 @@
 # Ashigaru Desktop
 
-A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](https://ashigaru.rs), providing a full Whirlpool coinjoin experience.
+A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](https://Ashigaru.rs), providing a full Whirlpool coinjoin experience.
 
 ---
 
@@ -17,7 +17,7 @@ A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](htt
 
 - **Eigenwallet Integration** — Post bad bank funds for atomic swap into XMR
 - **AmIExposed or BitHypha UTXO analysis** — Do analysis on your own UTXO's
-- **Dojo Bay Integration** — Connect to geographically dispersed electrum servers with BIP47 Verified reputations. 
+- **Dojo Bay Integration** — Connect to geographically dispersed electrum servers with BIP47 Verified reputations.
 - **Dojo Integration** — Get all the benefits of Dojo such as Nextblock estimates, personal electrum server detail and more
 
 ---
@@ -26,19 +26,19 @@ A graphical Bitcoin wallet and desktop GUI front-end for [Ashigaru Terminal](htt
 
 Pre-built binaries for every platform are published on the [Releases](../../releases) page.
 
-| Platform | Package | Min OS | Notarized |
-|---|---|---|---|
-| Windows | `.exe` installer, `.msi` | Windows 10 | — |
-| macOS (Apple Silicon) | `Ashigaru-X.Y.Z-aarch64.dmg` | macOS 11.0 | No, ad-hoc signed |
-| macOS (Intel) | `Ashigaru-X.Y.Z-x86_64.dmg` | macOS 11.0 | No, ad-hoc signed |
-| Linux (desktop) | `.deb`, `.rpm`, `.tar.gz`, `.AppImage` | — | — |
-| Linux (headless / server) | `ashigaru-server` `.deb`, `.rpm` | — | — |
+| Platform                  | Package                                | Min OS     | Notarized         |
+| ------------------------- | -------------------------------------- | ---------- | ----------------- |
+| Windows                   | `.exe` installer, `.msi`               | Windows 10 | —                 |
+| macOS (Apple Silicon)     | `Ashigaru-X.Y.Z-aarch64.dmg`           | macOS 11.0 | No, ad-hoc signed |
+| macOS (Intel)             | `Ashigaru-X.Y.Z-x86_64.dmg`            | macOS 11.0 | No, ad-hoc signed |
+| Linux (desktop)           | `.deb`, `.rpm`, `.tar.gz`, `.AppImage` | —          | —                 |
+| Linux (headless / server) | `Ashigaru-server` `.deb`, `.rpm`       | —          | —                 |
 
 Each release also includes `SHA256SUMS`, `MESSAGE.txt`, and `RELEASE-BIP47-SIGNATURE.txt` for verification.
 
 **macOS installation**
 
-Requires macOS 11.0 (Big Sur) or later. macOS builds are ad-hoc signed but not Developer ID signed or notarized. On macOS Ventura and later, Gatekeeper is stricter for quarantined, non-notarized apps downloaded from the internet — ad-hoc signing alone does not satisfy trust requirements, and you may see "damaged and can't be opened" or a blocked launch. This can also indicate a bad signature or packaging issue, so verify the file hash first (see *Verifying a release* below).
+Requires macOS 11.0 (Big Sur) or later. macOS builds are ad-hoc signed but not Developer ID signed or notarized. On macOS Ventura and later, Gatekeeper is stricter for quarantined, non-notarized apps downloaded from the internet — ad-hoc signing alone does not satisfy trust requirements, and you may see "damaged and can't be opened" or a blocked launch. This can also indicate a bad signature or packaging issue, so verify the file hash first (see _Verifying a release_ below).
 
 If the hash checks out, two options:
 
@@ -114,8 +114,8 @@ The verifier derives the notification address from the payment code and checks t
 Requires JDK 21 (Temurin recommended).
 
 ```bash
-git clone --recursive https://github.com/linkinparkrulz/ashigaru-desktop.git
-cd ashigaru-desktop
+git clone --recursive https://github.com/linkinparkrulz/Ashigaru-desktop.git
+cd Ashigaru-desktop
 ./gradlew jpackage
 ```
 
@@ -137,7 +137,7 @@ The AppImage task downloads `appimagetool` from the official AppImageKit continu
 
 For proving reproducibility, see docs [here](docs/ReproducibleBuilds.md).
 
-___
+---
 
 ### Software license:
 
